@@ -25,4 +25,4 @@ run:
 	go run . serve
 
 clean:
-	rm -rf web/dist tusk
+	rm -rf web/dist tusk exports/ test_export.json

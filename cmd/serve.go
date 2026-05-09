@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	dbFile      string
 	address     string
 	port        int
 	openBrowser bool
@@ -63,7 +62,6 @@ var serveCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serveCmd)
 
-	serveCmd.Flags().StringVarP(&dbFile, "db-file", "d", "todo.db", "The path to sqlite database file to use")
 	serveCmd.Flags().StringVarP(&address, "address", "b", "localhost", "The ip address to bind to")
 	serveCmd.Flags().IntVarP(&port, "port", "p", 8080, "The port to listen on")
 	serveCmd.Flags().BoolVarP(&openBrowser, "open-browser", "o", true, "Specify if app automatically opens in browser")

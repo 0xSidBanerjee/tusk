@@ -5,8 +5,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/0xSidBanerjee/tusk/internal/db"
+	"github.com/0xSidBanerjee/tusk/internal/export"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +35,40 @@ var exportCmd = &cobra.Command{
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Exporting todo list in %s format to %s\n", exportFormat, exportPath)
+		database, err := db.InitDB(dbFile)
+		if err != nil {
+			fmt.Printf("Error: failed to initialize database: %v\n", err)
+			os.Exit(1)
+		}
+		defer database.Close()
+
+		store := db.NewSQLiteStore(database)
+		// Fetch all tasks with no limits
+		tasks, _, err := store.GetAll(db.GetAllFilters{Page: 1, PageSize: 1000000})
+		if err != nil {
+			fmt.Printf("Error: failed to fetch tasks: %v\n", err)
+			os.Exit(1)
+		}
+
+		formatter, err := export.GetFormatter(exportFormat)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		finalPath := exportPath
+		info, err := os.Stat(exportPath)
+		if err == nil && info.IsDir() {
+			filename := fmt.Sprintf("tusk_export_%d.%s", time.Now().Unix(), strings.ToLower(exportFormat))
+			finalPath = filepath.Join(exportPath, filename)
+		}
+
+		if err := formatter.Export(tasks, finalPath); err != nil {
+			fmt.Printf("Error: failed to export: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Successfully exported %d tasks to %s\n", len(tasks), finalPath)
 	},
 }
 

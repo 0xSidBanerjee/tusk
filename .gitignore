@@ -38,3 +38,10 @@ TODO.md
 *.db
 *.db-shm
 *.db-wal
+
+# Exports
+exports/
+test_export.json
+*.csv
+*.yaml
+*.toml

@@ -9,6 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	dbFile string
+)
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "tusk",
@@ -39,6 +43,8 @@ func init() {
 	// will be global for your application.
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.tusk.yaml)")
+
+	rootCmd.PersistentFlags().StringVarP(&dbFile, "db-file", "d", "todo.db", "The path to sqlite database file to use")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
