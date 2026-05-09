@@ -3,16 +3,18 @@
 all: build
 
 lint:
-	golangci-lint run
+	go vet ./...
+	cd web && npm run lint
 
 fmt:
 	go fmt ./...
+	cd web && npm run format
 
 deps:
 	go mod tidy
 	cd web && npm install
 
-test:
+test: build-web
 	go test ./...
 
 build-web:
@@ -21,8 +23,8 @@ build-web:
 build: build-web
 	go build -o tusk .
 
-run:
-	go run . serve
+run: build
+	./tusk serve
 
 clean:
 	rm -rf web/dist tusk exports/ test_export.json
