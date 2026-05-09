@@ -5,35 +5,38 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
+)
+
+var (
+	exportFormat string
+	exportPath   string
 )
 
 // exportCmd represents the export command
 var exportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Export the todo list to common formats",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		format := strings.ToUpper(exportFormat)
+		switch format {
+		case "CSV", "JSON", "YAML", "TOML":
+			exportFormat = format
+			return nil
+		default:
+			return fmt.Errorf("invalid export format: %s. Supported formats: CSV, JSON, YAML, TOML", exportFormat)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("export called")
+		fmt.Printf("Exporting todo list in %s format to %s\n", exportFormat, exportPath)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(exportCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// exportCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// exportCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "CSV", "The format to be exported as (CSV, JSON, YAML, TOML)")
+	exportCmd.Flags().StringVarP(&exportPath, "export-path", "l", ".", "The location and name of the output file")
 }
