@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/0xSidBanerjee/tusk/internal/api"
 	"github.com/0xSidBanerjee/tusk/internal/db"
@@ -46,6 +47,8 @@ var serveCmd = &cobra.Command{
 
 		if openBrowser {
 			go func() {
+				// Give the server a moment to start
+				time.Sleep(1 * time.Second)
 				slog.Info("opening browser", "url", url)
 				if err := util.OpenBrowser(url); err != nil {
 					slog.Warn("failed to open browser", "error", err)
