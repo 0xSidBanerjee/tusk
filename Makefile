@@ -2,7 +2,7 @@
 
 all: build
 
-lint:
+lint: build-web
 	go vet ./...
 	cd web && npm run lint
 
