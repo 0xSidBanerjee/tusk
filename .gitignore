@@ -42,7 +42,3 @@ Frontend.md
 
 # Exports
 exports/
-test_export.json
-*.csv
-*.yaml
-*.toml
