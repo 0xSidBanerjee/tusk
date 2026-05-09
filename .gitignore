@@ -33,6 +33,7 @@ go.work.sum
 *.db
 GEMINI.md
 TODO.md
+Frontend.md
 
 # SQL WAL mode artifacts
 *.db
