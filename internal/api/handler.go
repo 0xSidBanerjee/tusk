@@ -1,6 +1,7 @@
 package api
 
 import (
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -202,7 +203,7 @@ func LoggerMiddleware() gin.HandlerFunc {
 	}
 }
 
-func (h *Handler) RegisterRoutes(router *gin.Engine) {
+func (h *Handler) RegisterRoutes(router *gin.Engine, assets fs.FS) {
 	router.Use(LoggerMiddleware())
 	router.Use(gin.Recovery())
 
@@ -214,4 +215,29 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		v1.PATCH("/tasks/:id", h.UpdateTask)
 		v1.DELETE("/tasks/:id", h.DeleteTask)
 	}
+
+	// Serve static files
+	staticHandler := http.FileServer(http.FS(assets))
+
+	router.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// If it's an API route, don't serve static files
+		if strings.HasPrefix(path, "/api") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API route not found"})
+			return
+		}
+
+		// Check if file exists in assets
+		f, err := assets.Open(strings.TrimPrefix(path, "/"))
+		if err == nil {
+			f.Close()
+			staticHandler.ServeHTTP(c.Writer, c.Request)
+			return
+		}
+
+		// Fallback to index.html for SPA routing
+		c.Request.URL.Path = "/"
+		staticHandler.ServeHTTP(c.Writer, c.Request)
+	})
 }

@@ -22,7 +22,7 @@ func TestHandlers(t *testing.T) {
 	store := db.NewSQLiteStore(database)
 	handler := NewHandler(store)
 	router := gin.New()
-	handler.RegisterRoutes(router)
+	handler.RegisterRoutes(router, os.DirFS("../../web/dist"))
 
 	// Test Create
 	taskReq := CreateTaskRequest{Title: "API Task"}
