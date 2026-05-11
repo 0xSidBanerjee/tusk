@@ -1,4 +1,4 @@
-.PHONY: all lint fmt deps test build-web build run clean
+.PHONY: all lint fmt deps test build-web build run release clean
 
 all: build
 
@@ -25,6 +25,9 @@ build: build-web
 
 run: build
 	./tusk serve
+
+release:
+	goreleaser release --snapshot --clean
 
 clean:
 	rm -rf web/dist tusk exports/ test_export.json
