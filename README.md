@@ -1,22 +1,18 @@
 # Tusk
 
-A minimalist, single-binary todo web application built with **Go** and **React**. Tusk mirrors the simplicity of a classic todo list while providing a powerful CLI and a calm, functional web interface.
+A minimalist, single-binary todo web application built with **Go** and **React**. Tusk mirrors the simplicity of a classic todo list while providing a powerful CLI and a functional web interface.
 
-> Single binary, zero external dependencies (except SQLite), and ready for your workflow.
+## Features
 
-- **Fast & Lightweight** — Built with Go and React, served from a single binary using `go:embed`.
-- **Persistent Storage** — Local SQLite database with WAL mode enabled for high performance.
-- **Modern Web Interface** — A calm, functional UI with Light/Dark mode support and responsive design.
-- **Powerful CLI** — Command-line interface for serving the web app or exporting your tasks.
-- **Export Everywhere** — Export your todo list to JSON, CSV, YAML, or TOML formats.
-- **Developer Ready** — Clean Makefile, CI/CD with GitHub Actions, and cross-platform releases via GoReleaser.
-
----
+- **Single Binary Deployment** — Go backend, SQLite database, and React frontend are all embedded into a single executable.
+- **Natural Language Entry** — Create tasks using a simple pipe-delimited syntax: `Title | Priority | Deadline`.
+- **Light & Dark Mode** — Clean, responsive web interface with support for multiple themes.
+- **Data Portability** — Import and export tasks in JSON, CSV, YAML, and TOML formats.
+- **Developer Ready** — Automated CI/CD with GitHub Actions and GoReleaser.
 
 ## Installation
 
-### Build from source
-Tusk is written in Go and requires Go 1.22+ and Node.js 20+ for the frontend build.
+Ensure you have **Go 1.22+** and **Node.js 20+** installed.
 
 ```bash
 git clone https://github.com/0xSidBanerjee/tusk.git
@@ -25,20 +21,21 @@ make build
 ./tusk --help
 ```
 
-## Quick Start
+## Usage
 
+### Launch the Web App
 ```bash
-# 1. Start the web application
 ./tusk serve
+```
 
-# 2. Start on a custom port and address
-./tusk serve --port 9000 --address 0.0.0.0
+### Import Data
+```bash
+./tusk import --format JSON --input-file tasks.json
+```
 
-# 3. Export tasks to JSON
-./tusk export --format JSON --export-path tasks.json
-
-# 4. Export all tasks to a directory (auto-generates filename)
-./tusk export --format YAML --export-path ./exports/
+### Export Data
+```bash
+./tusk export --format YAML --export-path ./backups/
 ```
 
 ## CLI Reference
@@ -47,7 +44,7 @@ make build
 | Flag | Description | Default |
 | --- | --- | --- |
 | `-d, --db-file` | Path to the SQLite database file | `todo.db` |
-| `-h, --help` | Help for tusk | - |
+| `-h, --help` | Display help information | - |
 
 ### `serve` Command
 Serves the web application and REST API.
@@ -63,29 +60,35 @@ Exports the todo list to common formats.
 
 | Flag | Description | Default |
 | --- | --- | --- |
-| `-f, --format` | The format to export as (CSV, JSON, YAML, TOML) | `CSV` |
-| `-l, --export-path` | The location or filename for the output | `.` |
+| `-f, --format` | Export format (CSV, JSON, YAML, TOML) | `CSV` |
+| `-l, --export-path` | Output location or filename | `.` |
 
----
+### `import` Command
+Imports tasks and lists from a file.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `-f, --format` | Input format (CSV, JSON, YAML, TOML) | `JSON` |
+| `-i, --input-file` | Path to the file to import | - |
 
 ## Development
 
-Tusk uses a `Makefile` for standard development tasks:
+Tusk uses a `Makefile` for common development tasks:
 
 | Target | Description |
 | --- | --- |
-| `make deps` | Install Go and Node.js dependencies |
-| `make lint` | Run Go vet and ESLint |
-| `make fmt` | Format Go and React code |
-| `make test` | Run the full test suite (Go + Frontend) |
-| `make build` | Build the optimized single binary |
-| `make run` | Build and run the app directly |
-| `make clean` | Remove all build and export artifacts |
+| `make deps` | Install backend and frontend dependencies |
+| `make lint` | Run static analysis (Go vet & ESLint) |
+| `make fmt` | Format all source files |
+| `make test` | Execute the full test suite |
+| `make build` | Build the optimized single-binary executable |
+| `make clean` | Remove all build and temporary artifacts |
 
-## Technology Stack
-- **Backend**: Go, Gin Framework, SQLite, Cobra CLI.
-- **Frontend**: React, Vite, TanStack Query (React Query), Tailwind CSS, Lucide icons.
-- **Ops**: GitHub Actions (CI), GoReleaser (CD).
+## Tech Stack
+
+- **Backend**: Go, Gin, SQLite, Cobra.
+- **Frontend**: React, Vite, Tailwind CSS, Framer Motion, TanStack Query.
+- **Release**: GitHub Actions, GoReleaser.
 
 ## License
-See [`LICENSE`](LICENSE).
+MIT
