@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import * as chrono from "chrono-node";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createTask } from "../../api/tasks";
@@ -8,7 +9,7 @@ import { CornerDownLeft } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-export function QuickAddTask() {
+export function QuickAddTask({ activeListId }: { activeListId: string }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -20,6 +21,7 @@ export function QuickAddTask() {
       setValue("");
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["lists"] });
     },
     onError: (err: any) => {
       setError(err.response?.data?.error || "Failed to add task");
@@ -65,14 +67,18 @@ export function QuickAddTask() {
   const handleSubmit = () => {
     if (!value.trim() || mutation.isPending) return;
     
-    const task = parseQuickInput(value);
-    if (!task.title) {
+    const taskData = parseQuickInput(value);
+    if (!taskData.title) {
       setError("Title is mandatory");
       return;
     }
     
-    mutation.mutate(task);
+    mutation.mutate({
+      ...taskData,
+      list_id: activeListId === "all" ? null : activeListId
+    });
   };
+
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Tab" && ghostText) {
@@ -90,26 +96,36 @@ export function QuickAddTask() {
   };
 
   return (
-    <div className="w-full space-y-2">
+    <motion.div 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full space-y-2"
+    >
       <div className={cn(
         "relative group transition-all duration-500 ease-out",
         value ? "scale-[1.005]" : "scale-100"
       )}>
         <div className="relative flex items-center">
-          <Input
-            ref={inputRef}
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              if (error) setError(null);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="Fix login bug | tomorrow | high"
-            className={cn(
-              "pr-10 h-12 text-base shadow-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/10 border-muted-foreground/20",
-              error && "border-destructive focus-visible:ring-destructive/10"
-            )}
-          />
+          <motion.div
+            className="w-full"
+            whileFocus={{ scale: 1.01 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <Input
+              ref={inputRef}
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                if (error) setError(null);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Fix login bug | tomorrow | high"
+              className={cn(
+                "pr-10 h-12 text-base shadow-sm transition-all focus-visible:ring-4 focus-visible:ring-primary/10 border-muted-foreground/20",
+                error && "border-destructive focus-visible:ring-destructive/10"
+              )}
+            />
+          </motion.div>
 
           
           {/* Ghost Text Overlay */}
@@ -125,10 +141,17 @@ export function QuickAddTask() {
              {mutation.isPending && (
               <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
             )}
-            <CornerDownLeft className={cn(
-              "w-4 h-4 transition-colors",
-              value ? "text-primary/50" : "text-muted-foreground/10"
-            )} />
+            <motion.div
+              animate={{
+                scale: value ? [1, 1.2, 1] : 1,
+                opacity: value ? 1 : 0.3
+              }}
+            >
+              <CornerDownLeft className={cn(
+                "w-4 h-4 transition-colors",
+                value ? "text-primary/50" : "text-muted-foreground/10"
+              )} />
+            </motion.div>
           </div>
         </div>
       </div>
@@ -157,7 +180,7 @@ export function QuickAddTask() {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

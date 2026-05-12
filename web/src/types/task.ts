@@ -1,7 +1,18 @@
 export type Priority = "High" | "Medium" | "Low";
 
+export interface List {
+  id: string;
+  name: string;
+  color: string;
+  created_at: string;
+  total_count: number;
+  incomplete_count: number;
+}
+
+
 export interface Task {
   id: string;
+  list_id: string | null;
   title: string;
   description?: string;
   priority?: Priority;
@@ -12,6 +23,7 @@ export interface Task {
 }
 
 export interface CreateTaskRequest {
+  list_id?: string;
   title: string;
   description?: string;
   priority?: Priority;
@@ -24,4 +36,5 @@ export interface GetTasksResponse {
   page: number;
   page_size: number;
 }
+
 

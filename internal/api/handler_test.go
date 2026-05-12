@@ -20,7 +20,7 @@ func TestHandlers(t *testing.T) {
 
 	database, _ := db.InitDB(dbFile)
 	store := db.NewSQLiteStore(database)
-	handler := NewHandler(store)
+	handler := NewHandler(store, store)
 	router := gin.New()
 	handler.RegisterRoutes(router, os.DirFS("../../web/dist"))
 

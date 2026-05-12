@@ -1,6 +1,15 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getLists } from "../../api/lists";
 import { Task, Priority } from "../../types/task";
 import { cn } from "../../lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TaskFormProps {
   initialData?: Task;
@@ -11,10 +20,18 @@ interface TaskFormProps {
 export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
+  const [listId, setListId] = useState<string | null>(
+    initialData?.list_id === "default" ? null : (initialData?.list_id || null)
+  );
   const [priority, setPriority] = useState<Priority | undefined>(initialData?.priority);
   const [deadline, setDeadline] = useState(
     initialData?.deadline ? initialData.deadline.split("T")[0] : ""
   );
+
+  const { data: listsData } = useQuery({
+    queryKey: ["lists"],
+    queryFn: getLists,
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +40,7 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
     onSubmit({
       title,
       description: description || undefined,
+      list_id: listId,
       priority: priority || undefined,
       deadline: deadline ? new Date(deadline).toISOString() : undefined,
     });
@@ -51,6 +69,26 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
           rows={3}
           className="w-full px-3 py-2 rounded-md border bg-background focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
         />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">List</label>
+        <Select value={listId || "none"} onValueChange={(val) => setListId(val === "none" ? null : val)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a list" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Inbox</SelectItem>
+            {listsData?.data?.filter(l => l.id !== 'default').map((list) => (
+              <SelectItem key={list.id} value={list.id}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: list.color }} />
+                  {list.name}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

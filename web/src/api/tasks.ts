@@ -6,6 +6,7 @@ const api = axios.create({
 });
 
 export const getTasks = async (params: {
+  list_id?: string;
   priority?: Priority;
   status?: boolean;
   page?: number;
@@ -14,6 +15,7 @@ export const getTasks = async (params: {
   const { data } = await api.get<GetTasksResponse>("/tasks", { params });
   return data;
 };
+
 
 export const createTask = async (task: Partial<Task>) => {
   const { data } = await api.post<Task>("/tasks", task);

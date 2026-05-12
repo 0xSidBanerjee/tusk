@@ -36,7 +36,7 @@ var serveCmd = &cobra.Command{
 		defer database.Close()
 
 		store := db.NewSQLiteStore(database)
-		handler := api.NewHandler(store)
+		handler := api.NewHandler(store, store)
 
 		gin.SetMode(gin.ReleaseMode)
 		router := gin.New()

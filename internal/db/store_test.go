@@ -24,18 +24,21 @@ func TestSQLiteStore(t *testing.T) {
 	task := &model.Task{
 		Title: "Test Task",
 	}
-	err = store.Create(task)
+	err = store.CreateTask(task)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
 	if task.ID == "" {
 		t.Error("Expected task ID to be set")
 	}
+	if task.ListID != nil {
+		t.Errorf("Expected nil list ID for new unassigned task, got %s", *task.ListID)
+	}
 
-	// Test GetByID
-	got, err := store.GetByID(task.ID)
+	// Test GetTaskByID
+	got, err := store.GetTaskByID(task.ID)
 	if err != nil {
-		t.Fatalf("GetByID failed: %v", err)
+		t.Fatalf("GetTaskByID failed: %v", err)
 	}
 	if got.Title != task.Title {
 		t.Errorf("Expected title %s, got %s", task.Title, got.Title)
@@ -43,11 +46,11 @@ func TestSQLiteStore(t *testing.T) {
 
 	// Test Update
 	got.Title = "Updated Title"
-	err = store.Update(got)
+	err = store.UpdateTask(got)
 	if err != nil {
 		t.Fatalf("Update failed: %v", err)
 	}
-	updated, _ := store.GetByID(task.ID)
+	updated, _ := store.GetTaskByID(task.ID)
 	if updated.Title != "Updated Title" {
 		t.Errorf("Expected title Updated Title, got %s", updated.Title)
 	}
@@ -55,9 +58,9 @@ func TestSQLiteStore(t *testing.T) {
 	// Test GetAll and Filtering
 	priority := model.PriorityHigh
 	task2 := &model.Task{Title: "Task 2", Priority: &priority}
-	store.Create(task2)
+	store.CreateTask(task2)
 
-	tasks, total, err := store.GetAll(GetAllFilters{Priority: &priority})
+	tasks, total, err := store.GetAllTasks(GetAllFilters{Priority: &priority})
 	if err != nil {
 		t.Fatalf("GetAll with filter failed: %v", err)
 	}
@@ -69,13 +72,94 @@ func TestSQLiteStore(t *testing.T) {
 	}
 
 	// Test Delete
-	err = store.Delete(task.ID)
+	err = store.DeleteTask(task.ID)
 	if err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
-	deleted, _ := store.GetByID(task.ID)
+	deleted, _ := store.GetTaskByID(task.ID)
 	if deleted != nil {
 		t.Error("Expected task to be deleted")
+	}
+}
+
+func TestListStore(t *testing.T) {
+	dbFile := "test_list.db"
+	defer os.Remove(dbFile)
+
+	db, err := InitDB(dbFile)
+	if err != nil {
+		t.Fatalf("Failed to init db: %v", err)
+	}
+	defer db.Close()
+
+	store := NewSQLiteStore(db)
+
+	// Test CreateList
+	list := &model.List{
+		Name:  "Work",
+		Color: "#FF0000",
+	}
+	if err := store.CreateList(list); err != nil {
+		t.Fatalf("CreateList failed: %v", err)
+	}
+
+	// Test GetListByID
+	got, err := store.GetListByID(list.ID)
+	if err != nil {
+		t.Fatalf("GetListByID failed: %v", err)
+	}
+	if got.Name != "Work" {
+		t.Errorf("Expected name Work, got %s", got.Name)
+	}
+
+	// Test UpdateList
+	got.Name = "Business"
+	if err := store.UpdateList(got); err != nil {
+		t.Fatalf("UpdateList failed: %v", err)
+	}
+	updated, _ := store.GetListByID(list.ID)
+	if updated.Name != "Business" {
+		t.Errorf("Expected name Business, got %s", updated.Name)
+	}
+
+	// Test GetAllLists and task counts
+	task := &model.Task{Title: "Task in Business", ListID: &list.ID}
+	store.CreateTask(task)
+
+	lists, err := store.GetAllLists()
+	if err != nil {
+		t.Fatalf("GetAllLists failed: %v", err)
+	}
+	// Total lists should be 2 (Inbox + Business)
+	if len(lists) != 2 {
+		t.Errorf("Expected 2 lists, got %d", len(lists))
+	}
+
+	found := false
+	for _, l := range lists {
+		if l.ID == list.ID {
+			found = true
+			if l.TotalCount != 1 {
+				t.Errorf("Expected total count 1 for list %s, got %d", l.Name, l.TotalCount)
+			}
+			if l.IncompleteCount != 1 {
+				t.Errorf("Expected incomplete count 1 for list %s, got %d", l.Name, l.IncompleteCount)
+			}
+		}
+	}
+	if !found {
+		t.Error("Did not find created list in GetAllLists")
+	}
+
+	// Test DeleteList and task reassignment
+	if err := store.DeleteList(list.ID); err != nil {
+		t.Fatalf("DeleteList failed: %v", err)
+	}
+	
+	// Task should now be in 'default' list
+	t1, _ := store.GetTaskByID(task.ID)
+	if t1.ListID != nil {
+		t.Errorf("Expected task list_id to be nil after list deletion, got %s", *t1.ListID)
 	}
 }
 
@@ -105,14 +189,14 @@ func TestTaskSorting(t *testing.T) {
 	}
 
 	for _, task := range tasks {
-		if err := store.Create(&task); err != nil {
+		if err := store.CreateTask(&task); err != nil {
 			t.Fatalf("Failed to create task %s: %v", task.Title, err)
 		}
 	}
 
-	gotTasks, _, err := store.GetAll(GetAllFilters{Page: 1, PageSize: 10})
+	gotTasks, _, err := store.GetAllTasks(GetAllFilters{Page: 1, PageSize: 10})
 	if err != nil {
-		t.Fatalf("GetAll failed: %v", err)
+		t.Fatalf("GetAllTasks failed: %v", err)
 	}
 
 	expectedOrder := []string{
@@ -133,4 +217,5 @@ func TestTaskSorting(t *testing.T) {
 		}
 	}
 }
+
 

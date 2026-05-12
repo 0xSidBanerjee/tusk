@@ -15,7 +15,7 @@ export function TaskFilters({
   onPriorityChange,
   onStatusChange,
   onReset,
-}) {
+}: TaskFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-4 py-4 text-sm">
       <div className="flex items-center gap-2">

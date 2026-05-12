@@ -20,8 +20,18 @@ func (p Priority) IsValid() bool {
 	return false
 }
 
+type List struct {
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	Color           string    `json:"color"`
+	CreatedAt       time.Time `json:"created_at"`
+	TotalCount      int       `json:"total_count"`
+	IncompleteCount int       `json:"incomplete_count"`
+}
+
 type Task struct {
 	ID          string     `json:"id"`
+	ListID      *string    `json:"list_id"`
 	Title       string     `json:"title"`
 	Description *string    `json:"description,omitempty"`
 	Priority    *Priority  `json:"priority,omitempty"`
