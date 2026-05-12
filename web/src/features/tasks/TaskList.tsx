@@ -5,6 +5,7 @@ import { Priority, Task } from "../../types/task";
 import { TaskCard } from "./TaskCard";
 import { TaskFilters } from "./TaskFilters";
 import { TaskForm } from "./TaskForm";
+import { QuickAddTask } from "./QuickAddTask";
 import { Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
 export function TaskList() {
@@ -71,6 +72,7 @@ export function TaskList() {
           Add Task
         </button>
       </div>
+      <QuickAddTask />
 
       <TaskFilters
         priority={priority}

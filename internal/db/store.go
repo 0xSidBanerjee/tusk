@@ -86,7 +86,22 @@ func (s *SQLiteStore) GetAll(filters GetAllFilters) ([]model.Task, int, error) {
 	}
 	offset := (filters.Page - 1) * filters.PageSize
 
-	dataQuery := fmt.Sprintf("SELECT id, title, description, priority, deadline, status, created_at, updated_at FROM tasks %s ORDER BY created_at DESC LIMIT ? OFFSET ?", where)
+	dataQuery := fmt.Sprintf(`
+		SELECT id, title, description, priority, deadline, status, created_at, updated_at 
+		FROM tasks %s 
+		ORDER BY 
+			CASE WHEN status = 0 AND deadline < datetime('now') THEN 0 ELSE 1 END ASC,
+			status ASC, 
+			deadline IS NULL ASC,
+			deadline ASC,
+			CASE priority 
+				WHEN 'High' THEN 1 
+				WHEN 'Medium' THEN 2 
+				WHEN 'Low' THEN 3 
+				ELSE 4 
+			END ASC, 
+			created_at DESC
+		LIMIT ? OFFSET ?`, where)
 	dataArgs := append(args, filters.PageSize, offset)
 
 	rows, err := s.db.Query(dataQuery, dataArgs...)

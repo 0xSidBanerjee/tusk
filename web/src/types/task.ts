@@ -11,9 +11,17 @@ export interface Task {
   updated_at: string;
 }
 
+export interface CreateTaskRequest {
+  title: string;
+  description?: string;
+  priority?: Priority;
+  deadline?: string;
+}
+
 export interface GetTasksResponse {
   data: Task[] | null;
   total: number;
   page: number;
   page_size: number;
 }
+
