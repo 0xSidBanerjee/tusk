@@ -8,6 +8,11 @@ import (
 
 	"github.com/0xSidBanerjee/tusk/internal/model"
 	"github.com/google/uuid"
+	"errors"
+)
+
+var (
+	ErrDuplicateListName = errors.New("a list with this name already exists")
 )
 
 type GetAllFilters struct {
@@ -41,6 +46,10 @@ type SQLiteStore struct {
 
 func NewSQLiteStore(db *sql.DB) *SQLiteStore {
 	return &SQLiteStore{db: db}
+}
+
+func (s *SQLiteStore) GetDB() *sql.DB {
+	return s.db
 }
 
 func (s *SQLiteStore) CreateTask(task *model.Task) error {
@@ -199,6 +208,9 @@ func (s *SQLiteStore) CreateList(list *model.List) error {
 	query := `INSERT INTO lists (id, name, color, created_at) VALUES (?, ?, ?, ?)`
 	_, err := s.db.Exec(query, list.ID, list.Name, list.Color, list.CreatedAt)
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return ErrDuplicateListName
+		}
 		return fmt.Errorf("failed to create list: %w", err)
 	}
 	return nil
@@ -260,6 +272,9 @@ func (s *SQLiteStore) UpdateList(list *model.List) error {
 	query := `UPDATE lists SET name = ?, color = ? WHERE id = ?`
 	res, err := s.db.Exec(query, list.Name, list.Color, list.ID)
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return ErrDuplicateListName
+		}
 		return fmt.Errorf("failed to update list: %w", err)
 	}
 	rows, err := res.RowsAffected()

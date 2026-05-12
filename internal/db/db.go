@@ -41,6 +41,11 @@ func createSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create lists table: %w", err)
 	}
 
+	uniqueIndexQuery := `CREATE UNIQUE INDEX IF NOT EXISTS idx_lists_name ON lists(name)`
+	if _, err := db.Exec(uniqueIndexQuery); err != nil {
+		return fmt.Errorf("failed to create unique index on lists name: %w", err)
+	}
+
 	// Seed Inbox
 	seedQuery := `INSERT OR IGNORE INTO lists (id, name, color) VALUES ('default', 'Inbox', '#6366f1')`
 	if _, err := db.Exec(seedQuery); err != nil {

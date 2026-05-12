@@ -4,7 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/0xSidBanerjee/tusk/internal/model"
@@ -12,12 +12,33 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type ExportData struct {
+	Lists []ExportList `json:"lists" yaml:"lists" toml:"lists"`
+	Tasks []ExportTask `json:"tasks" yaml:"tasks" toml:"tasks"`
+}
+
+type ExportList struct {
+	Name  string `json:"Name" yaml:"Name" toml:"Name"`
+	Color string `json:"Color" yaml:"Color" toml:"Color"`
+}
+
+type ExportTask struct {
+	Title       string     `json:"Title" yaml:"Title" toml:"Title"`
+	Description *string    `json:"Description,omitempty" yaml:"Description,omitempty" toml:"Description,omitempty"`
+	ListName    string     `json:"ListName" yaml:"ListName" toml:"ListName"`
+	Priority    *string    `json:"Priority,omitempty" yaml:"Priority,omitempty" toml:"Priority,omitempty"`
+	Deadline    *time.Time  `json:"Deadline,omitempty" yaml:"Deadline,omitempty" toml:"Deadline,omitempty"`
+	Status      bool       `json:"Status" yaml:"Status" toml:"Status"`
+	CreatedAt   time.Time  `json:"CreatedAt" yaml:"CreatedAt" toml:"CreatedAt"`
+	UpdatedAt   *time.Time `json:"UpdatedAt,omitempty" yaml:"UpdatedAt,omitempty" toml:"UpdatedAt,omitempty"`
+}
+
 type Formatter interface {
-	Export(tasks []model.Task, path string) error
+	Format(lists []model.List, tasks []model.Task) (map[string][]byte, error)
 }
 
 func GetFormatter(format string) (Formatter, error) {
-	switch format {
+	switch strings.ToUpper(format) {
 	case "CSV":
 		return &CSVFormatter{}, nil
 	case "JSON":
@@ -31,86 +52,198 @@ func GetFormatter(format string) (Formatter, error) {
 	}
 }
 
+func prepareExportData(lists []model.List, tasks []model.Task) ExportData {
+	listMap := make(map[string]string)
+	for _, l := range lists {
+		listMap[l.ID] = l.Name
+	}
+
+	exportLists := make([]ExportList, 0, len(lists))
+	for _, l := range lists {
+		if l.ID == "default" {
+			continue // Skip default list from [[lists]] section
+		}
+		exportLists = append(exportLists, ExportList{
+			Name:  l.Name,
+			Color: l.Color,
+		})
+	}
+
+	exportTasks := make([]ExportTask, 0, len(tasks))
+	for _, t := range tasks {
+		listName := ""
+		if t.ListID != nil {
+			listName = listMap[*t.ListID]
+		}
+
+		var priority *string
+		if t.Priority != nil {
+			p := string(*t.Priority)
+			priority = &p
+		}
+
+		var updatedAt *time.Time
+		if !t.UpdatedAt.Equal(t.CreatedAt) {
+			ut := t.UpdatedAt.UTC()
+			updatedAt = &ut
+		}
+
+		exportTasks = append(exportTasks, ExportTask{
+			Title:       t.Title,
+			Description: t.Description,
+			ListName:    listName,
+			Priority:    priority,
+			Deadline:    t.Deadline,
+			Status:      t.Status,
+			CreatedAt:   t.CreatedAt.UTC(),
+			UpdatedAt:   updatedAt,
+		})
+	}
+
+	return ExportData{
+		Lists: exportLists,
+		Tasks: exportTasks,
+	}
+}
+
 type JSONFormatter struct{}
 
-func (f *JSONFormatter) Export(tasks []model.Task, path string) error {
-	data, err := json.MarshalIndent(tasks, "", "  ")
+func (f *JSONFormatter) Format(lists []model.List, tasks []model.Task) (map[string][]byte, error) {
+	data := prepareExportData(lists, tasks)
+	buf, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return os.WriteFile(path, data, 0644)
+	return map[string][]byte{"export.json": buf}, nil
 }
 
 type CSVFormatter struct{}
 
-func (f *CSVFormatter) Export(tasks []model.Task, path string) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+func (f *CSVFormatter) Format(lists []model.List, tasks []model.Task) (map[string][]byte, error) {
+	data := prepareExportData(lists, tasks)
+	res := make(map[string][]byte)
 
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// Header
-	err = writer.Write([]string{"ID", "Title", "Description", "Priority", "Deadline", "Status", "CreatedAt", "UpdatedAt"})
-	if err != nil {
-		return err
-	}
-
-	for _, t := range tasks {
+	// Tasks CSV
+	taskBuf := &strings.Builder{}
+	taskWriter := csv.NewWriter(taskBuf)
+	taskWriter.Write([]string{"Title", "Description", "ListName", "Priority", "Deadline", "Status", "CreatedAt", "UpdatedAt"})
+	for _, t := range data.Tasks {
 		desc := ""
 		if t.Description != nil {
 			desc = *t.Description
 		}
 		prio := ""
 		if t.Priority != nil {
-			prio = string(*t.Priority)
+			prio = *t.Priority
 		}
 		deadline := ""
 		if t.Deadline != nil {
 			deadline = t.Deadline.Format(time.RFC3339)
 		}
+		updatedAt := ""
+		if t.UpdatedAt != nil {
+			updatedAt = t.UpdatedAt.Format(time.RFC3339)
+		}
 
-		record := []string{
-			t.ID,
+		taskWriter.Write([]string{
 			t.Title,
 			desc,
+			t.ListName,
 			prio,
 			deadline,
 			fmt.Sprintf("%v", t.Status),
 			t.CreatedAt.Format(time.RFC3339),
-			t.UpdatedAt.Format(time.RFC3339),
-		}
-		if err := writer.Write(record); err != nil {
-			return err
-		}
+			updatedAt,
+		})
 	}
-	return nil
+	taskWriter.Flush()
+	res["tasks.csv"] = []byte(taskBuf.String())
+
+	// Lists CSV
+	listBuf := &strings.Builder{}
+	listWriter := csv.NewWriter(listBuf)
+	listWriter.Write([]string{"Name", "Color"})
+	for _, l := range data.Lists {
+		listWriter.Write([]string{l.Name, l.Color})
+	}
+	listWriter.Flush()
+	res["lists.csv"] = []byte(listBuf.String())
+
+	return res, nil
 }
 
 type YAMLFormatter struct{}
 
-func (f *YAMLFormatter) Export(tasks []model.Task, path string) error {
-	data, err := yaml.Marshal(tasks)
+func (f *YAMLFormatter) Format(lists []model.List, tasks []model.Task) (map[string][]byte, error) {
+	data := prepareExportData(lists, tasks)
+	buf, err := yaml.Marshal(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return os.WriteFile(path, data, 0644)
+	return map[string][]byte{"export.yaml": buf}, nil
 }
 
 type TOMLFormatter struct{}
 
-func (f *TOMLFormatter) Export(tasks []model.Task, path string) error {
-	// TOML requires a top-level table/struct for arrays
-	wrapper := struct {
-		Tasks []model.Task `toml:"tasks"`
-	}{Tasks: tasks}
-
-	data, err := toml.Marshal(wrapper)
-	if err != nil {
-		return err
+func (f *TOMLFormatter) Format(lists []model.List, tasks []model.Task) (map[string][]byte, error) {
+	data := prepareExportData(lists, tasks)
+	
+	// Convert to a TOML-friendly structure that avoids quoted dates
+	type tomlExportList struct {
+		Name  string `toml:"Name"`
+		Color string `toml:"Color"`
 	}
-	return os.WriteFile(path, data, 0644)
+
+	type tomlExportTask struct {
+		Title       string     `toml:"Title"`
+		Description *string    `toml:"Description,omitempty"`
+		ListName    string     `toml:"ListName"`
+		Priority    *string    `toml:"Priority,omitempty"`
+		Deadline    time.Time  `toml:"Deadline,omitempty"`
+		Status      bool       `toml:"Status"`
+		CreatedAt   time.Time  `toml:"CreatedAt"`
+		UpdatedAt   time.Time  `toml:"UpdatedAt,omitempty"`
+	}
+
+	type tomlExportData struct {
+		Lists []tomlExportList `toml:"lists"`
+		Tasks []tomlExportTask `toml:"tasks"`
+	}
+
+	res := tomlExportData{
+		Lists: make([]tomlExportList, len(data.Lists)),
+		Tasks: make([]tomlExportTask, len(data.Tasks)),
+	}
+
+	for i, l := range data.Lists {
+		res.Lists[i] = tomlExportList{Name: l.Name, Color: l.Color}
+	}
+
+	for i, t := range data.Tasks {
+		var deadline time.Time
+		if t.Deadline != nil {
+			deadline = *t.Deadline
+		}
+		var updatedAt time.Time
+		if t.UpdatedAt != nil {
+			updatedAt = *t.UpdatedAt
+		}
+
+		res.Tasks[i] = tomlExportTask{
+			Title:       t.Title,
+			Description: t.Description,
+			ListName:    t.ListName,
+			Priority:    t.Priority,
+			Deadline:    deadline,
+			Status:      t.Status,
+			CreatedAt:   t.CreatedAt,
+			UpdatedAt:   updatedAt,
+		}
+	}
+
+	buf, err := toml.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return map[string][]byte{"export.toml": buf}, nil
 }

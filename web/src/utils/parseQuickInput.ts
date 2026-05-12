@@ -45,8 +45,8 @@ export const parseQuickInput = (raw: string): CreateTaskRequest => {
   let priority: Priority | undefined = undefined;
 
   if (parts.length >= 3) {
-    deadline = parseDeadline(parts[1]);
-    priority = isValidPriority(parts[2]) ? parsePriority(parts[2]) : undefined;
+    priority = isValidPriority(parts[1]) ? parsePriority(parts[1]) : undefined;
+    deadline = parseDeadline(parts[2]);
   } else if (parts.length === 2) {
     if (isValidPriority(parts[1])) {
       priority = parsePriority(parts[1]);

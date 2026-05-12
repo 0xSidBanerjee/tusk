@@ -1,9 +1,14 @@
 package api
 
 import (
+	"archive/zip"
+	"bytes"
+	"database/sql"
+	"errors"
+	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
-	"mime"
 	"net/http"
 	"path"
 	"strconv"
@@ -11,6 +16,7 @@ import (
 	"time"
 
 	"github.com/0xSidBanerjee/tusk/internal/db"
+	"github.com/0xSidBanerjee/tusk/internal/export"
 	"github.com/0xSidBanerjee/tusk/internal/model"
 	"github.com/gin-gonic/gin"
 )
@@ -250,6 +256,10 @@ func (h *Handler) CreateList(c *gin.Context) {
 	}
 
 	if err := h.listStore.CreateList(list); err != nil {
+		if errors.Is(err, db.ErrDuplicateListName) {
+			c.JSON(http.StatusConflict, gin.H{"error": "a list with this name already exists"})
+			return
+		}
 		slog.Error("failed to create list", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
@@ -313,12 +323,166 @@ func (h *Handler) UpdateList(c *gin.Context) {
 	}
 
 	if err := h.listStore.UpdateList(list); err != nil {
+		if errors.Is(err, db.ErrDuplicateListName) {
+			c.JSON(http.StatusConflict, gin.H{"error": "a list with this name already exists"})
+			return
+		}
 		slog.Error("failed to update list", "id", id, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
 	c.JSON(http.StatusOK, list)
+}
+
+func (h *Handler) Export(c *gin.Context) {
+	format := c.DefaultQuery("format", "json")
+	
+	tasks, _, err := h.taskStore.GetAllTasks(db.GetAllFilters{Page: 1, PageSize: 1000000})
+	if err != nil {
+		slog.Error("failed to get tasks for export", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	lists, err := h.listStore.GetAllLists()
+	if err != nil {
+		slog.Error("failed to get lists for export", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	formatter, err := export.GetFormatter(format)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	files, err := formatter.Format(lists, tasks)
+	if err != nil {
+		slog.Error("failed to format export", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	timestamp := time.Now().Format("20060102150405")
+	
+	if strings.ToUpper(format) == "CSV" {
+		buf := new(bytes.Buffer)
+		zw := zip.NewWriter(buf)
+		for name, content := range files {
+			f, err := zw.Create(name)
+			if err != nil {
+				slog.Error("failed to create zip entry", "name", name, "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+				return
+			}
+			_, err = f.Write(content)
+			if err != nil {
+				slog.Error("failed to write zip entry", "name", name, "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+				return
+			}
+		}
+		if err := zw.Close(); err != nil {
+			slog.Error("failed to close zip writer", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+		
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"tusk_export_%s.zip\"", timestamp))
+		c.Data(http.StatusOK, "application/zip", buf.Bytes())
+	} else {
+		var content []byte
+		var filename string
+		for name, data := range files {
+			content = data
+			filename = fmt.Sprintf("tusk_export_%s.%s", timestamp, strings.ToLower(format))
+			_ = name // silence unused
+			break
+		}
+		
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+		c.Data(http.StatusOK, "application/octet-stream", content)
+	}
+}
+
+func (h *Handler) Import(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no file provided"})
+		return
+	}
+
+	ext := strings.ToLower(path.Ext(file.Filename))
+	format := ""
+	switch ext {
+	case ".json":
+		format = "JSON"
+	case ".yaml", ".yml":
+		format = "YAML"
+	case ".toml":
+		format = "TOML"
+	case ".csv", ".zip":
+		format = "CSV"
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported file format"})
+		return
+	}
+
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open file"})
+		return
+	}
+	defer src.Close()
+
+	data, err := io.ReadAll(src)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file"})
+		return
+	}
+
+	// For CSV, if it's not a ZIP, we need to wrap it or handle it.
+	// But according to requirements: "For CSV zip: accept a .zip containing _tasks.csv and _lists.csv"
+	// If user uploads a single .csv, we might error out since we need both.
+	// Let's rely on Import function to handle it.
+
+	// Use our internal db to get access to *sql.DB
+	// SQLiteStore has a private db field, we might need a getter or cast.
+	// Actually, let's assume SQLiteStore is implemented as a struct we can access.
+	// I'll check store.go again.
+	// It is `type SQLiteStore struct { db *sql.DB }`.
+	// I'll add a getter for it.
+
+	// For now, I'll use a hack if I can't access it, but I'll add a getter to SQLiteStore.
+
+	// Wait, I can't easily get *sql.DB from the interface.
+	// I'll add `GetDB() *sql.DB` to the Store interfaces or just use a type assertion.
+	
+	database := h.getDB()
+	if database == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error: db access failed"})
+		return
+	}
+
+	result, err := export.Import(database, format, data)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) getDB() *sql.DB {
+	// Type assertion to SQLiteStore
+	if store, ok := h.taskStore.(*db.SQLiteStore); ok {
+		// Use reflection or just add a getter in store.go
+		// I'll add a getter.
+		return store.GetDB()
+	}
+	return nil
 }
 
 func (h *Handler) DeleteList(c *gin.Context) {
@@ -380,42 +544,54 @@ func (h *Handler) RegisterRoutes(router *gin.Engine, assets fs.FS) {
 		v1.PUT("/lists/:id", h.UpdateList)
 		v1.PATCH("/lists/:id", h.UpdateList)
 		v1.DELETE("/lists/:id", h.DeleteList)
+
+		v1.GET("/export", h.Export)
+		v1.POST("/import", h.Import)
 	}
 
 	router.NoRoute(func(c *gin.Context) {
 		requestPath := c.Request.URL.Path
 
-		// If it's an API route, don't serve static files
+		// If it's an API route, return 404
 		if strings.HasPrefix(requestPath, "/api") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "API route not found"})
 			return
 		}
 
 		trimmedPath := strings.TrimPrefix(requestPath, "/")
+		
+		// If root, serve index.html directly
 		if trimmedPath == "" {
-			trimmedPath = "index.html"
-		}
-
-		// Try to serve the file
-		content, err := fs.ReadFile(assets, trimmedPath)
-		if err != nil {
-			// Fallback to index.html for SPA routing
-			content, err = fs.ReadFile(assets, "index.html")
-			if err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+			content, err := fs.ReadFile(assets, "index.html")
+			if err == nil {
+				c.Data(http.StatusOK, "text/html; charset=utf-8", content)
 				return
 			}
+		}
+
+		// Check if file exists in assets
+		_, err := fs.Stat(assets, trimmedPath)
+		if err != nil {
+			// If the path has an extension, it's likely a missing asset (JS, CSS, Image, etc.)
+			// We should return 404 for these, not index.html to avoid confusing the browser
+			if path.Ext(trimmedPath) != "" {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Asset not found"})
+				return
+			}
+			// Fallback to index.html for SPA routing
 			trimmedPath = "index.html"
 		}
 
-		// Determine content type
-		ext := path.Ext(trimmedPath)
-		contentType := mime.TypeByExtension(ext)
-		if contentType == "" {
-			contentType = "application/octet-stream"
+		// Special case for index.html to avoid redirect loop from c.FileFromFS
+		if trimmedPath == "index.html" {
+			content, err := fs.ReadFile(assets, "index.html")
+			if err == nil {
+				c.Data(http.StatusOK, "text/html; charset=utf-8", content)
+				return
+			}
 		}
 
-		c.Data(http.StatusOK, contentType, content)
+		c.FileFromFS(trimmedPath, http.FS(assets))
 	})
 }
 

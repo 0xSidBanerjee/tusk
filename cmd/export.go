@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/0xSidBanerjee/tusk/internal/db"
 	"github.com/0xSidBanerjee/tusk/internal/export"
@@ -50,25 +49,50 @@ var exportCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		lists, err := store.GetAllLists()
+		if err != nil {
+			fmt.Printf("Error: failed to fetch lists: %v\n", err)
+			os.Exit(1)
+		}
+
 		formatter, err := export.GetFormatter(exportFormat)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		finalPath := exportPath
-		info, err := os.Stat(exportPath)
-		if err == nil && info.IsDir() {
-			filename := fmt.Sprintf("tusk_export_%d.%s", time.Now().Unix(), strings.ToLower(exportFormat))
-			finalPath = filepath.Join(exportPath, filename)
-		}
-
-		if err := formatter.Export(tasks, finalPath); err != nil {
-			fmt.Printf("Error: failed to export: %v\n", err)
+		files, err := formatter.Format(lists, tasks)
+		if err != nil {
+			fmt.Printf("Error: failed to format export: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("Successfully exported %d tasks to %s\n", len(tasks), finalPath)
+		outputBase := exportPath
+		info, err := os.Stat(exportPath)
+		if err == nil && info.IsDir() {
+			outputBase = filepath.Join(exportPath, "tusk_export")
+		}
+
+		for filename, content := range files {
+			var finalPath string
+			if exportFormat == "CSV" {
+				// For CSV, we have tasks.csv and lists.csv
+				nameWithoutExt := strings.TrimSuffix(filepath.Base(filename), ".csv")
+				finalPath = fmt.Sprintf("%s_%s.csv", strings.TrimSuffix(outputBase, ".csv"), nameWithoutExt)
+			} else {
+				if strings.HasSuffix(strings.ToLower(outputBase), "."+strings.ToLower(exportFormat)) {
+					finalPath = outputBase
+				} else {
+					finalPath = fmt.Sprintf("%s.%s", outputBase, strings.ToLower(exportFormat))
+				}
+			}
+
+			if err := os.WriteFile(finalPath, content, 0644); err != nil {
+				fmt.Printf("Error: failed to write file %s: %v\n", finalPath, err)
+				os.Exit(1)
+			}
+			fmt.Printf("Successfully exported to %s\n", finalPath)
+		}
 	},
 }
 

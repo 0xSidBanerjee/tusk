@@ -1,7 +1,6 @@
 package export
 
 import (
-	"os"
 	"testing"
 
 	"github.com/0xSidBanerjee/tusk/internal/model"
@@ -14,6 +13,12 @@ func TestFormatters(t *testing.T) {
 			Title: "Test Task",
 		},
 	}
+	lists := []model.List{
+		{
+			ID:   "default",
+			Name: "Inbox",
+		},
+	}
 
 	formats := []string{"JSON", "CSV", "YAML", "TOML"}
 
@@ -24,16 +29,17 @@ func TestFormatters(t *testing.T) {
 				t.Fatalf("Failed to get formatter: %v", err)
 			}
 
-			path := "test_export." + format
-			defer os.Remove(path)
-
-			err = formatter.Export(tasks, path)
+			files, err := formatter.Format(lists, tasks)
 			if err != nil {
-				t.Fatalf("Export failed: %v", err)
+				t.Fatalf("Format failed: %v", err)
 			}
 
-			if _, err := os.Stat(path); os.IsNotExist(err) {
-				t.Errorf("File %s was not created", path)
+			if len(files) == 0 {
+				t.Errorf("No files were generated for format %s", format)
+			}
+			
+			if format == "CSV" && len(files) != 2 {
+				t.Errorf("CSV should generate 2 files, got %d", len(files))
 			}
 		})
 	}
