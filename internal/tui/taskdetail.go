@@ -53,7 +53,7 @@ func (d detailModel) View(totalWidth int, lists []model.List) string {
 	
 	backHint := lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{Light: "#808080", Dark: "#606060"}).
-		Render("󰜵 Back [Esc]")
+		Render("[Esc] Back")
 	
 	header := backHint + "\n" + lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), true, false, false, false).
@@ -62,7 +62,7 @@ func (d detailModel) View(totalWidth int, lists []model.List) string {
 		MarginTop(1).
 		Render("") + "\n"
 	
-	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4")).Render(strings.ToUpper(d.task.Title))
+	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"}).Render(strings.ToUpper(d.task.Title))
 	
 	description := ""
 	if d.task.Description != nil && *d.task.Description != "" {
@@ -103,10 +103,10 @@ func (d detailModel) View(totalWidth int, lists []model.List) string {
 		}
 	}
 	
-	status := "󰄱 Pending"
+	status := "○ Pending"
 	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFAF00"))
 	if d.task.Status {
-		status = "󰄵 Completed"
+		status = "● Completed"
 		statusStyle = statusStyle.Foreground(lipgloss.Color("#5FD787"))
 	}
 	

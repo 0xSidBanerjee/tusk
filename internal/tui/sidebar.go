@@ -98,19 +98,15 @@ func (s sidebarModel) Update(msg tea.Msg, isFocused bool, activeListID string, w
 			case "j":
 				if s.cursor < len(s.lists) {
 					s.cursor++
+					return s, func() tea.Msg { return previewListMsg(s.getID()) }
 				}
 			case "k":
 				if s.cursor > 0 {
 					s.cursor--
+					return s, func() tea.Msg { return previewListMsg(s.getID()) }
 				}
 			case "enter":
-				var id string
-				if s.cursor == 0 {
-					id = "all"
-				} else {
-					id = s.lists[s.cursor-1].ID
-				}
-				return s, func() tea.Msg { return selectListMsg(id) }
+				return s, func() tea.Msg { return selectListMsg(s.getID()) }
 			case "n":
 				s.inputMode = true
 				s.renameMode = false
@@ -140,6 +136,16 @@ func (s sidebarModel) Update(msg tea.Msg, isFocused bool, activeListID string, w
 	return s, tea.Batch(cmds...)
 }
 
+func (s sidebarModel) getID() string {
+	if s.cursor == 0 {
+		return "all"
+	}
+	if s.cursor > 0 && s.cursor <= len(s.lists) {
+		return s.lists[s.cursor-1].ID
+	}
+	return "all"
+}
+
 func (s sidebarModel) View(isFocused bool, activeListID string, totalWidth int) string {
 	sidebarWidth := totalWidth / 4
 	if sidebarWidth < 20 {
@@ -149,13 +155,8 @@ func (s sidebarModel) View(isFocused bool, activeListID string, totalWidth int) 
 	style := lipgloss.NewStyle().
 		Width(sidebarWidth).
 		Padding(1, 1).
-		Border(lipgloss.NormalBorder(), false, true, false, false)
-	
-	if isFocused {
-		style = style.BorderForeground(lipgloss.Color("#7D56F4"))
-	} else {
-		style = style.BorderForeground(lipgloss.AdaptiveColor{Light: "#D0D0D0", Dark: "#404040"})
-	}
+		Border(lipgloss.NormalBorder(), false, true, false, false).
+		BorderForeground(lipgloss.AdaptiveColor{Light: "#D0D0D0", Dark: "#404040"})
 
 	headerStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{Light: "#808080", Dark: "#606060"}).
@@ -165,22 +166,23 @@ func (s sidebarModel) View(isFocused bool, activeListID string, totalWidth int) 
 	content := headerStyle.Render("GENERAL") + "\n"
 	
 	// All Tasks
-	allTasksStyle := lipgloss.NewStyle().PaddingLeft(2)
 	isActiveAll := activeListID == "all"
 	isCursorAll := s.cursor == 0
 
+	allTasksStyle := lipgloss.NewStyle().PaddingLeft(2)
+	label := "  All Tasks"
 	if isCursorAll {
-		allTasksStyle = allTasksStyle.
-			Background(lipgloss.Color("#7D56F4")).
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Bold(true)
-		content += allTasksStyle.Width(sidebarWidth-2).Render("󰓼 All Tasks") + "\n"
-	} else {
-		if isActiveAll {
-			allTasksStyle = allTasksStyle.Foreground(lipgloss.Color("#7D56F4")).Bold(true)
+		if isFocused {
+			allTasksStyle = allTasksStyle.Background(lipgloss.AdaptiveColor{Light: "#EEEEEE", Dark: "#2A2A2A"}).Bold(true)
+			label = "> All Tasks"
+		} else {
+			allTasksStyle = allTasksStyle.Background(lipgloss.AdaptiveColor{Light: "#F5F5F5", Dark: "#1F1F1F"})
+			label = "> All Tasks"
 		}
-		content += allTasksStyle.Render("  All Tasks") + "\n"
+	} else if isActiveAll {
+		allTasksStyle = allTasksStyle.Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 	}
+	content += allTasksStyle.Width(sidebarWidth - 2).Render(label) + "\n"
 	
 	content += "\n" + headerStyle.Render("MY LISTS") + "\n"
 	
@@ -191,34 +193,27 @@ func (s sidebarModel) View(isFocused bool, activeListID string, totalWidth int) 
 
 		label := l.Name
 		count := fmt.Sprintf("%d", l.IncompleteCount)
+		rowWidth := sidebarWidth - 4
 		
+		displayLabel := "  " + label
 		if isCursor {
-			lineStyle = lineStyle.
-				Background(lipgloss.Color("#7D56F4")).
-				Foreground(lipgloss.Color("#FFFFFF")).
-				Bold(true)
-			
-			// Render with count
-			rowWidth := sidebarWidth - 4
-			item := "󰄾 " + label
-			spacing := rowWidth - lipgloss.Width(item) - lipgloss.Width(count)
-			if spacing > 0 {
-				item += strings.Repeat(" ", spacing) + count
+			if isFocused {
+				lineStyle = lineStyle.Background(lipgloss.AdaptiveColor{Light: "#EEEEEE", Dark: "#2A2A2A"}).Bold(true)
+				displayLabel = "> " + label
+			} else {
+				lineStyle = lineStyle.Background(lipgloss.AdaptiveColor{Light: "#F5F5F5", Dark: "#1F1F1F"})
+				displayLabel = "> " + label
 			}
-			content += lineStyle.Width(sidebarWidth-2).Render(item) + "\n"
-		} else {
-			if isActive {
-				lineStyle = lineStyle.Foreground(lipgloss.Color("#7D56F4")).Bold(true)
-			}
-			
-			item := "  " + label
-			rowWidth := sidebarWidth - 4
-			spacing := rowWidth - lipgloss.Width(item) - lipgloss.Width(count)
-			if spacing > 0 {
-				item += strings.Repeat(" ", spacing) + lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#505050"}).Render(count)
-			}
-			content += lineStyle.Render(item) + "\n"
+		} else if isActive {
+			lineStyle = lineStyle.Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 		}
+		
+		spacing := rowWidth - lipgloss.Width(displayLabel) - lipgloss.Width(count)
+		item := displayLabel
+		if spacing > 0 {
+			item += strings.Repeat(" ", spacing) + lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#505050"}).Render(count)
+		}
+		content += lineStyle.Width(sidebarWidth-2).Render(item) + "\n"
 	}
 	
 	if s.inputMode {

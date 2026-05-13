@@ -50,7 +50,7 @@ func newFormModel(store *db.SQLiteStore) formModel {
 	}
 }
 
-func (f *formModel) reset() {
+func (f *formModel) reset(activeListID string, lists []model.List) {
 	f.isEdit = false
 	f.focusIndex = 0
 	f.taskID = ""
@@ -58,7 +58,17 @@ func (f *formModel) reset() {
 	f.titleInput.SetValue("")
 	f.descInput.SetValue("")
 	f.deadlineInput.SetValue("")
+	
 	f.activeList = 0
+	if activeListID != "all" {
+		for i, l := range lists {
+			if l.ID == activeListID {
+				f.activeList = i + 1
+				break
+			}
+		}
+	}
+	
 	f.activePrio = 0
 	f.titleInput.Focus()
 	f.descInput.Blur()
@@ -68,8 +78,12 @@ func (f *formModel) reset() {
 	f.confirmSave = false
 }
 
-func (f *formModel) loadTask(t model.Task) {
-	f.reset()
+func (f *formModel) loadTask(t model.Task, lists []model.List) {
+	listID := "all"
+	if t.ListID != nil {
+		listID = *t.ListID
+	}
+	f.reset(listID, lists)
 	f.isEdit = true
 	f.taskID = t.ID
 	f.titleInput.SetValue(t.Title)
@@ -248,7 +262,7 @@ func (f formModel) View(totalWidth int, lists []model.List) string {
 	
 	backHint := lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{Light: "#808080", Dark: "#606060"}).
-		Render("󰜵 Cancel [Esc]")
+		Render("[Esc] Cancel")
 	
 	header := backHint + "\n" + lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), true, false, false, false).
@@ -257,14 +271,14 @@ func (f formModel) View(totalWidth int, lists []model.List) string {
 		MarginTop(1).
 		Render("") + "\n"
 	
-	formTitle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4")).Render(strings.ToUpper(title))
+	formTitle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"}).Render(strings.ToUpper(title))
 	
 	content := header + formTitle + "\n\n"
 	
 	// Fields
 	content += f.renderField("TITLE", f.titleInput.View(), f.focusIndex == 0)
 	if f.errorMsg == "title is required" && f.focusIndex == 0 {
-		content += lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F87")).Render("  󰀦 Title is required") + "\n"
+		content += lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F87")).Render("  Title is required") + "\n"
 	}
 	
 	content += "\n" + f.renderField("DESCRIPTION", f.descInput.View(), f.focusIndex == 1)
@@ -293,7 +307,7 @@ func (f formModel) View(totalWidth int, lists []model.List) string {
 	
 	content += "\n" + f.renderField("DEADLINE", f.deadlineInput.View(), f.focusIndex == 4)
 	if f.errorMsg == "invalid deadline" && f.focusIndex == 4 {
-		content += lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F87")).Render("  󰀦 Invalid deadline format (use YYYY-MM-DD, today, or tomorrow)") + "\n"
+		content += lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F87")).Render("  Invalid deadline format (use YYYY-MM-DD, today, or tomorrow)") + "\n"
 	}
 	
 	if f.confirmSave {
@@ -302,11 +316,11 @@ func (f formModel) View(totalWidth int, lists []model.List) string {
 			action = "UPDATE"
 		}
 		content += "\n" + lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(lipgloss.Color("#FF5F87")).
+			Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"}).
+			Background(lipgloss.AdaptiveColor{Light: "#EEEEEE", Dark: "#333333"}).
 			Padding(0, 1).
 			Bold(true).
-			Render(fmt.Sprintf("  %s '%s'? PRESS ENTER AGAIN TO CONFIRM", action, strings.ToUpper(f.titleInput.Value())))
+			Render(fmt.Sprintf("  Confirm %s? [Enter] confirm", action))
 	}
 
 	return style.Render(content)

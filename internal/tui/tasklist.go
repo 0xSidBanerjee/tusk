@@ -194,8 +194,7 @@ func (t taskListModel) View(isFocused bool, activeListID string, totalWidth int,
 		Padding(1, 2)
 	
 	if isFocused {
-		style = style.Border(lipgloss.NormalBorder(), false, false, false, false).
-			BorderForeground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+		style = style.BorderForeground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 	}
 
 	// Header
@@ -209,109 +208,111 @@ func (t taskListModel) View(isFocused bool, activeListID string, totalWidth int,
 		}
 	}
 	
-	incompleteCount := 0
-	for _, task := range t.tasks {
-		if !task.Status {
-			incompleteCount++
-		}
-	}
-	
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"}).
 		Padding(0, 1)
 	
-	countBadge := lipgloss.NewStyle().
-		Background(lipgloss.AdaptiveColor{Light: "#EEEEEE", Dark: "#333333"}).
-		Foreground(lipgloss.AdaptiveColor{Light: "#666666", Dark: "#AAAAAA"}).
-		Padding(0, 1).
-		MarginLeft(1).
-		Render(fmt.Sprintf("%d incomplete", incompleteCount))
-
-	header := lipgloss.JoinHorizontal(lipgloss.Center,
-		titleStyle.Render(strings.ToUpper(listName)),
-		countBadge,
-	)
-	
-	content := header + "\n" + lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), true, false, false, false).
-		BorderForeground(lipgloss.AdaptiveColor{Light: "#D0D0D0", Dark: "#404040"}).
-		Width(taskListWidth - 4).
-		MarginTop(1).
-		Render("") + "\n"
+	content := titleStyle.Render(strings.ToUpper(listName)) + "\n" + 
+		lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder(), true, false, false, false).
+			BorderForeground(lipgloss.AdaptiveColor{Light: "#D0D0D0", Dark: "#404040"}).
+			Width(taskListWidth - 4).
+			MarginTop(1).
+			Render("") + "\n"
 	
 	if len(t.tasks) == 0 {
-		content += "\n  " + lipgloss.NewStyle().Italic(true).Foreground(lipgloss.Color("#808080")).Render("No tasks here yet. Press 'n' to add one.")
+		content += "\n  " + lipgloss.NewStyle().Italic(true).Foreground(lipgloss.Color("#808080")).Render("No tasks here. [n] new task")
 	} else {
 		innerListWidth := taskListWidth - 4
+		
+		// Separate incomplete and completed
+		var incomplete, completed []int
 		for i, task := range t.tasks {
-			line := t.renderTaskLine(task, i == t.cursor, isFocused, innerListWidth, activeListID, lists)
+			if task.Status {
+				completed = append(completed, i)
+			} else {
+				incomplete = append(incomplete, i)
+			}
+		}
+
+		for _, idx := range incomplete {
+			line := t.renderTaskLine(t.tasks[idx], idx == t.cursor, isFocused, innerListWidth, activeListID, lists)
 			content += line + "\n"
+		}
+
+		if len(completed) > 0 {
+			separator := lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#505050"}).
+				Margin(1, 0).
+				Render(fmt.Sprintf("── Completed (%d) ──", len(completed)))
+			content += separator + "\n"
+			
+			for _, idx := range completed {
+				line := t.renderTaskLine(t.tasks[idx], idx == t.cursor, isFocused, innerListWidth, activeListID, lists)
+				content += line + "\n"
+			}
 		}
 	}
 	
 	if t.showFilterBar {
-		content += "\n" + t.renderFilterBar(taskListWidth)
+		content += "\n" + t.renderFilterBar(taskListWidth-4)
 	}
 	
 	if t.confirmDelete && len(t.tasks) > 0 {
 		taskName := t.tasks[t.cursor].Title
-		content += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Render(fmt.Sprintf("  Delete '%s'? [y/n]", taskName))
+		content += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F87")).Bold(true).Render(fmt.Sprintf("  Delete '%s'? [y/n]", taskName))
 	}
 
 	return style.Render(content)
 }
 
 func (t taskListModel) renderTaskLine(task model.Task, isSelected bool, isFocused bool, width int, activeListID string, lists []model.List) string {
-	indicator := "󰄱" // Unchecked
+	indicator := "○" // Pending
 	if task.Status {
-		indicator = "󰄵" // Checked
+		indicator = "●" // Done
 	}
 	
-	prioIndicator := "  "
+	prioColor := "#808080"
 	if task.Priority != nil {
 		switch *task.Priority {
-		case model.PriorityHigh:
-			prioIndicator = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F87")).Render("󰐊 ")
-		case model.PriorityMedium:
-			prioIndicator = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFAF00")).Render("󰐊 ")
-		case model.PriorityLow:
-			prioIndicator = lipgloss.NewStyle().Foreground(lipgloss.Color("#5FD7FF")).Render("󰐊 ")
+		case model.PriorityHigh: prioColor = "#FF5F87"
+		case model.PriorityMedium: prioColor = "#FFAF00"
+		case model.PriorityLow: prioColor = "#5FD7FF"
 		}
-	} else {
-		prioIndicator = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#D0D0D0", Dark: "#404040"}).Render("󰄰 ")
 	}
+	prioIndicator := lipgloss.NewStyle().Foreground(lipgloss.Color(prioColor)).Render("●")
 
 	title := task.Title
 	titleStyle := lipgloss.NewStyle().PaddingLeft(1)
 	if task.Status {
 		titleStyle = titleStyle.Strikethrough(true).Foreground(lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#606060"})
+	} else {
+		titleStyle = titleStyle.Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 	}
 	
-	rowStyle := lipgloss.NewStyle().Width(width).Padding(0, 1)
+	rowStyle := lipgloss.NewStyle().Width(width)
 	
+	cursorIndicator := "  "
 	if isSelected && isFocused {
-		rowStyle = rowStyle.
-			Background(lipgloss.Color("#7D56F4")).
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Bold(true)
-		titleStyle = titleStyle.Foreground(lipgloss.Color("#FFFFFF"))
+		cursorIndicator = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"}).Bold(true).Render("> ")
+		rowStyle = rowStyle.Background(lipgloss.AdaptiveColor{Light: "#EEEEEE", Dark: "#2A2A2A"}).Bold(true)
 	} else if isSelected {
-		rowStyle = rowStyle.
-			Background(lipgloss.AdaptiveColor{Light: "#F0F0F0", Dark: "#2A2A2A"})
+		cursorIndicator = "> "
+		rowStyle = rowStyle.Background(lipgloss.AdaptiveColor{Light: "#F5F5F5", Dark: "#1F1F1F"})
 	}
 	
-	// List badge
+	// List badge immediately after title
 	badge := ""
 	if activeListID == "all" && task.ListID != nil {
 		for _, l := range lists {
 			if l.ID == *task.ListID {
 				badge = lipgloss.NewStyle().
 					Foreground(lipgloss.Color(l.Color)).
-					Background(lipgloss.AdaptiveColor{Light: "#E0E0E0", Dark: "#333333"}).
-					Padding(0, 1).
-					MarginRight(1).
-					Render(strings.ToUpper(l.Name))
+					Italic(true).
+					Faint(true).
+					MarginLeft(1).
+					Render(fmt.Sprintf("(%s)", l.Name))
 				break
 			}
 		}
@@ -324,25 +325,22 @@ func (t taskListModel) renderTaskLine(task model.Task, isSelected bool, isFocuse
 		if util.IsOverdue(task.Deadline, task.Status) {
 			deadlineStyle = deadlineStyle.Foreground(lipgloss.Color("#FF5F00")).Bold(true)
 		}
-		deadline = deadlineStyle.Render("󰃭 " + deadline)
+		deadline = deadlineStyle.Render(deadline)
 	}
+	
+	prefix := cursorIndicator + indicator + " " + prioIndicator
+	mainText := prefix + titleStyle.Render(title) + badge
 	
 	// Available width inside the row (width - 2 for padding)
 	availWidth := width - 2
 	
-	prefix := indicator + " " + prioIndicator
-	mainText := prefix + titleStyle.Render(title)
-	
-	// Right side info
-	rightInfo := badge + deadline
-	
-	// Calculate spacing
-	spacing := availWidth - lipgloss.Width(mainText) - lipgloss.Width(rightInfo)
+	// Right side info (just deadline)
+	spacing := availWidth - lipgloss.Width(mainText) - lipgloss.Width(deadline)
 	if spacing > 0 {
 		mainText += strings.Repeat(" ", spacing)
 	}
 	
-	return rowStyle.Render(mainText + rightInfo)
+	return rowStyle.Render(mainText + deadline)
 }
 
 func (t taskListModel) renderFilterBar(width int) string {

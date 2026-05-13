@@ -30,6 +30,8 @@ type stateMsg struct {
 
 type focusMsg focusArea
 
+type previewListMsg string
+
 type selectListMsg string
 
 type Model struct {
@@ -105,13 +107,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.focus = focusSidebar
 					}
 				}
-			case "h":
+			case "h", "left":
 				if m.state == viewList && m.focus == focusTaskList {
 					m.focus = focusSidebar
+					return m, nil
 				}
-			case "l":
+			case "l", "right":
 				if m.state == viewList && m.focus == focusSidebar {
 					m.focus = focusTaskList
+					return m, nil
 				}
 			case "esc":
 				if m.state == viewDetail || m.state == viewForm {
@@ -131,16 +135,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.state == viewDetail {
 				m.detail.task = *msg.task
 			} else if m.state == viewForm {
-				m.form.loadTask(*msg.task)
+				m.form.loadTask(*msg.task, m.sidebar.lists)
 			}
 		} else if m.state == viewForm {
-			m.form.reset()
+			m.form.reset(m.activeListID, m.sidebar.lists)
 		}
 		
 		if m.state == viewList {
-			return m, m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, m.taskList.statusFilter)
+			return m, tea.Batch(
+				m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, m.taskList.statusFilter),
+				m.sidebar.fetchLists(),
+			)
 		}
 		return m, nil
+
+	case fetchedTasksMsg:
+		cmds = append(cmds, m.sidebar.fetchLists())
+
+	case previewListMsg:
+		m.activeListID = string(msg)
+		return m, m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, m.taskList.statusFilter)
 
 	case selectListMsg:
 		m.activeListID = string(msg)
@@ -213,8 +227,8 @@ func (m Model) View() string {
 	fullView := lipgloss.JoinVertical(lipgloss.Left, header, mainView, footer)
 	
 	finalStyle := lipgloss.NewStyle().
-		Border(lipgloss.DoubleBorder()).
-		BorderForeground(lipgloss.Color("#7D56F4")).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.AdaptiveColor{Light: "#D0D0D0", Dark: "#404040"}).
 		Padding(0, 1)
 	
 	if m.showHelp {
@@ -227,8 +241,8 @@ func (m Model) View() string {
 func (m *Model) renderHeader(width int) string {
 	titleStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FFFFFF")).
-		Background(lipgloss.Color("#7D56F4")).
+		Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"}).
+		Background(lipgloss.AdaptiveColor{Light: "#D0D0D0", Dark: "#333333"}).
 		Padding(0, 2)
 	
 	helpHintStyle := lipgloss.NewStyle().
@@ -236,7 +250,7 @@ func (m *Model) renderHeader(width int) string {
 		Padding(0, 1)
 	
 	title := titleStyle.Render("TUSK")
-	helpHint := helpHintStyle.Render("󰋖 Press '?' for help")
+	helpHint := helpHintStyle.Render("Press [?] for help")
 	
 	space := lipgloss.NewStyle().Width(width - lipgloss.Width(title) - lipgloss.Width(helpHint)).Render("")
 	
@@ -250,20 +264,20 @@ func (m *Model) renderHeader(width int) string {
 
 func (m *Model) renderFooter(width int) string {
 	statusStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#666666", Dark: "#AAAAAA"}).
+		Foreground(lipgloss.AdaptiveColor{Light: "#808080", Dark: "#808080"}).
 		Width(width).
 		Padding(0, 1)
 	
 	var hint string
 	if m.state == viewForm {
-		hint = "󰌑 save  󱊷 cancel  󱊵 next"
+		hint = "[Enter] save  [Esc] cancel  [Tab] next"
 	} else if m.state == viewDetail {
-		hint = "󰏫 edit  󰆴 delete  󰄵 toggle  󱊷 back"
+		hint = "[e] edit  [d] delete  [x] toggle  [Esc] back"
 	} else {
 		if m.focus == focusSidebar {
-			hint = "󰒭 navigate  󰌑 select  󰎍 new  󰆴 delete"
+			hint = "[j/k] navigate  [Enter] select  [n] new list  [d] delete"
 		} else {
-			hint = "󰒭 navigate  󰌑 open  󰎍 new  󰏫 edit  󰆴 delete  / filter"
+			hint = "[j/k] navigate  [Enter] open  [n] new task  [e] edit  [d] delete  [x] toggle  [/] filter"
 		}
 	}
 	
