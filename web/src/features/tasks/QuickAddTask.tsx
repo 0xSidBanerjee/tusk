@@ -72,7 +72,7 @@ export function QuickAddTask({ activeListId }: { activeListId: string }) {
     
     mutation.mutate({
       ...taskData,
-      list_id: activeListId === "all" ? null : activeListId
+      list_id: activeListId === "all" ? "default" : activeListId
     });
   };
 

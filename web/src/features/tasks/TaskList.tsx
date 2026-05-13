@@ -99,7 +99,7 @@ export function TaskList() {
       // If we're in a specific list view and the list_id changed, remove it from the current view immediately
       if (activeListId !== "all" && updatedFields.hasOwnProperty("list_id") && updatedFields.list_id !== activeListId) {
         // Special case for Inbox (default) which includes null list_id
-        const isMovedFromInbox = activeListId === "default" && updatedFields.list_id !== null;
+        const isMovedFromInbox = activeListId === "default" && updatedFields.list_id !== "default";
         const isMovedFromOtherList = activeListId !== "default";
 
         if (isMovedFromInbox || isMovedFromOtherList) {
@@ -359,7 +359,7 @@ export function TaskList() {
                   } else {
                     createMutation.mutate({
                       ...task,
-                      list_id: activeListId === "all" ? null : activeListId
+                      list_id: activeListId === "all" ? "default" : activeListId
                     });
                   }
                 }}

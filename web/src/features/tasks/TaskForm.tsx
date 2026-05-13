@@ -27,8 +27,8 @@ interface TaskFormProps {
 export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
-  const [listId, setListId] = useState<string | null>(
-    initialData?.list_id === "default" ? null : (initialData?.list_id || null)
+  const [listId, setListId] = useState<string>(
+    initialData?.list_id || "default"
   );
   const [priority, setPriority] = useState<Priority | undefined>(initialData?.priority);
   const [deadline, setDeadline] = useState<Date | undefined>(
@@ -95,12 +95,12 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
               <Hash className="w-3.5 h-3.5" />
               <label className="text-[9px] font-black uppercase tracking-[0.2em]">Workspace</label>
             </div>
-            <Select value={listId || "none"} onValueChange={(val) => setListId(val === "none" ? null : val)}>
+            <Select value={listId} onValueChange={(val) => setListId(val)}>
               <SelectTrigger className="h-12 rounded-xl bg-card border-muted/20 hover:border-primary/30 transition-all font-bold shadow-sm">
                 <SelectValue placeholder="Inbox" />
               </SelectTrigger>
               <SelectContent className="rounded-xl shadow-2xl border-muted/20 backdrop-blur-xl bg-card/95">
-                <SelectItem value="none" className="rounded-lg py-2">
+                <SelectItem value="default" className="rounded-lg py-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-indigo-500" />
                     <span className="font-bold text-xs">Inbox</span>
