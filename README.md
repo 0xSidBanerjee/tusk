@@ -1,19 +1,19 @@
 # Tusk
 
-A minimalist, single-binary todo web application built with **Go** and **React**. Tusk mirrors the simplicity of a classic todo list while providing a powerful CLI and a functional web interface.
+A single-binary task manager with a Web interface, TUI, and CLI.
 
 ## Features
 
-- **Single Binary Deployment** — Go backend, SQLite database, and React frontend are all embedded into a single executable.
-- **Natural Language Entry** — Create tasks using a simple pipe-delimited syntax: `Title | Priority | Deadline`.
-- **Light & Dark Mode** — Clean, responsive web interface with support for multiple themes.
-- **Data Portability** — Import and export tasks in JSON, CSV, YAML, and TOML formats.
-- **Developer Ready** — Automated CI/CD with GitHub Actions and GoReleaser.
+- **Single Binary**: Backend, frontend, and database (SQLite) are embedded into one executable.
+- **TUI**: Interactive terminal interface with live list navigation.
+- **Web UI**: Responsive web application with light/dark theme support.
+- **CLI**: Commands for importing/exporting tasks (JSON, CSV, YAML, TOML).
+- **Organization**: Support for custom lists and priority levels.
+- **Zero Dependencies**: Runs as a standalone binary on Linux, macOS, and Windows.
 
 ## Installation
 
-Ensure you have **Go 1.22+** and **Node.js 20+** installed.
-
+### From Source
 ```bash
 git clone https://github.com/0xSidBanerjee/tusk.git
 cd tusk
@@ -23,72 +23,66 @@ make build
 
 ## Usage
 
-### Launch the Web App
+### Terminal UI (TUI)
 ```bash
-./tusk serve
+./tusk tui
 ```
 
-### Import Data
+### Web Interface
 ```bash
-./tusk import --format JSON --input-file tasks.json
+./tusk serve -p 8080
 ```
 
-### Export Data
+### Data Portability
 ```bash
-./tusk export --format YAML --export-path ./backups/
+# Export
+./tusk export --format json --export-path backup.json
+
+# Import
+./tusk import --format csv --input-file tasks.csv
 ```
 
 ## CLI Reference
 
-### Global Flags
-| Flag | Description | Default |
-| --- | --- | --- |
-| `-d, --db-file` | Path to the SQLite database file | `todo.db` |
-| `-h, --help` | Display help information | - |
+### `tui`
+Interactive terminal interface.
+- `j/k`: Navigate tasks/lists
+- `enter`: Open/Select
+- `n`: New task
+- `d`: Delete task
+- `x`: Toggle status
+- `?`: Help
 
-### `serve` Command
-Serves the web application and REST API.
+### `serve`
+Start the web server and API.
+- `-b, --address`: Bind address (default: `localhost`)
+- `-p, --port`: Listen port (default: `8080`)
+- `-o, --open-browser`: Auto-open browser (default: `true`)
 
-| Flag | Description | Default |
-| --- | --- | --- |
-| `-b, --address` | The IP address to bind to | `localhost` |
-| `-p, --port` | The port to listen on | `8080` |
-| `-o, --open-browser` | Automatically open the app in the browser | `true` |
+### `export`
+- `-f, --format`: CSV, JSON, YAML, TOML
+- `-l, --export-path`: Output file or directory
 
-### `export` Command
-Exports the todo list to common formats.
-
-| Flag | Description | Default |
-| --- | --- | --- |
-| `-f, --format` | Export format (CSV, JSON, YAML, TOML) | `CSV` |
-| `-l, --export-path` | Output location or filename | `.` |
-
-### `import` Command
-Imports tasks and lists from a file.
-
-| Flag | Description | Default |
-| --- | --- | --- |
-| `-f, --format` | Input format (CSV, JSON, YAML, TOML) | `JSON` |
-| `-i, --input-file` | Path to the file to import | - |
+### `import`
+- `-f, --format`: CSV, JSON, YAML, TOML
+- `-i, --input-file`: Input file path
 
 ## Development
 
-Tusk uses a `Makefile` for common development tasks:
+Requires Go 1.22+ and Node.js 20+.
 
-| Target | Description |
-| --- | --- |
-| `make deps` | Install backend and frontend dependencies |
-| `make lint` | Run static analysis (Go vet & ESLint) |
-| `make fmt` | Format all source files |
-| `make test` | Execute the full test suite |
-| `make build` | Build the optimized single-binary executable |
-| `make clean` | Remove all build and temporary artifacts |
+```bash
+make deps    # Install dependencies
+make lint    # Run linters
+make test    # Run tests
+make build   # Build binary
+```
 
 ## Tech Stack
 
-- **Backend**: Go, Gin, SQLite, Cobra.
-- **Frontend**: React, Vite, Tailwind CSS, Framer Motion, TanStack Query.
-- **Release**: GitHub Actions, GoReleaser.
+- **Backend**: Go, Gin, SQLite, Cobra, Bubbletea
+- **Frontend**: React, Vite, Tailwind CSS
+- **Release**: GoReleaser
 
 ## License
 MIT
