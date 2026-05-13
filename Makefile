@@ -20,7 +20,7 @@ test: build-web
 build-web:
 	cd web && npm run build
 
-build: build-web
+build: deps build-web
 	go build -o tusk .
 
 run: build
