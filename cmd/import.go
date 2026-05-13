@@ -20,6 +20,18 @@ var (
 var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import tasks and lists from a file",
+	Long: `Import tasks and lists into the Tusk database from a previously exported file.
+
+Supported formats: JSON, YAML, TOML, CSV
+For CSV imports, provide separate --tasks-file and --lists-file flags instead of --input-file.
+
+Duplicate tasks (matched by title + creation time) are skipped.
+Duplicate list names are merged into the existing list.
+
+Examples:
+  tusk import --format json --input-file ./tusk_backup.json
+  tusk import --format yaml --input-file ./tusk_backup.yaml
+  tusk import --format csv --tasks-file ./tasks.csv --lists-file ./lists.csv`,
 	Run: func(cmd *cobra.Command, args []string) {
 		database, err := db.InitDB(dbFile)
 		if err != nil {
@@ -82,15 +94,12 @@ var importCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(importCmd)
 
-	importCmd.Flags().StringVarP(&importFormat, "format", "f", "", "The format of the input file (CSV, JSON, YAML, TOML)")
+	importCmd.Flags().StringVarP(&importFormat, "format", "f", "", "Format of the input file (json, yaml, toml, csv)")
 	importCmd.MarkFlagRequired("format")
 
-	importCmd.Flags().StringVarP(&importInputFile, "input-file", "i", "", "The path to the input file (not required for CSV)")
+	importCmd.Flags().StringVarP(&importInputFile, "input-file", "i", "", "Path to the input file (not required for CSV)")
 	
 	// CSV specific flags
-	importCmd.Flags().StringVar(&importTasksFile, "tasks-file", "", "The path to the tasks CSV file")
-	importCmd.Flags().StringVar(&importListsFile, "lists-file", "", "The path to the lists CSV file")
-
-	// Allow overriding db file
-	importCmd.Flags().StringVarP(&dbFile, "db-file", "d", "todo.db", "The path to sqlite database file to use")
+	importCmd.Flags().StringVar(&importTasksFile, "tasks-file", "", "Path to the tasks CSV file")
+	importCmd.Flags().StringVar(&importListsFile, "lists-file", "", "Path to the lists CSV file")
 }

@@ -4,6 +4,8 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,8 +24,19 @@ var (
 // exportCmd represents the export command
 var exportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "Export the todo list to common formats",
+	Short: "Export tasks and lists to a file",
+	Long: `Export all tasks and lists from the Tusk database to a file.
+
+Supported formats: JSON, YAML, TOML, CSV
+CSV exports produce a ZIP archive containing two files: tasks.csv and lists.csv.
+
+Examples:
+  tusk export --format json --export-path ./tusk_backup.json
+  tusk export --format csv --export-path ./tusk_backup`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if exportFormat == "" {
+			return fmt.Errorf("--format is required. Choose one of: json, yaml, toml, csv")
+		}
 		format := strings.ToUpper(exportFormat)
 		switch format {
 		case "CSV", "JSON", "YAML", "TOML":
@@ -73,25 +86,53 @@ var exportCmd = &cobra.Command{
 			outputBase = filepath.Join(exportPath, "tusk_export")
 		}
 
-		for filename, content := range files {
-			var finalPath string
-			if exportFormat == "CSV" {
-				// For CSV, we have tasks.csv and lists.csv
-				nameWithoutExt := strings.TrimSuffix(filepath.Base(filename), ".csv")
-				finalPath = fmt.Sprintf("%s_%s.csv", strings.TrimSuffix(outputBase, ".csv"), nameWithoutExt)
-			} else {
+		if exportFormat == "CSV" {
+			// Create a ZIP archive
+			zipBuf := new(bytes.Buffer)
+			zipWriter := zip.NewWriter(zipBuf)
+
+			for filename, content := range files {
+				f, err := zipWriter.Create(filename)
+				if err != nil {
+					fmt.Printf("Error: failed to create zip entry %s: %v\n", filename, err)
+					os.Exit(1)
+				}
+				if _, err := f.Write(content); err != nil {
+					fmt.Printf("Error: failed to write to zip entry %s: %v\n", filename, err)
+					os.Exit(1)
+				}
+			}
+
+			if err := zipWriter.Close(); err != nil {
+				fmt.Printf("Error: failed to close zip writer: %v\n", err)
+				os.Exit(1)
+			}
+
+			finalPath := outputBase
+			if !strings.HasSuffix(strings.ToLower(finalPath), ".zip") {
+				finalPath += ".zip"
+			}
+
+			if err := os.WriteFile(finalPath, zipBuf.Bytes(), 0644); err != nil {
+				fmt.Printf("Error: failed to write zip file %s: %v\n", finalPath, err)
+				os.Exit(1)
+			}
+			fmt.Printf("Successfully exported to %s\n", finalPath)
+		} else {
+			for _, content := range files {
+				var finalPath string
 				if strings.HasSuffix(strings.ToLower(outputBase), "."+strings.ToLower(exportFormat)) {
 					finalPath = outputBase
 				} else {
 					finalPath = fmt.Sprintf("%s.%s", outputBase, strings.ToLower(exportFormat))
 				}
-			}
 
-			if err := os.WriteFile(finalPath, content, 0644); err != nil {
-				fmt.Printf("Error: failed to write file %s: %v\n", finalPath, err)
-				os.Exit(1)
+				if err := os.WriteFile(finalPath, content, 0644); err != nil {
+					fmt.Printf("Error: failed to write file %s: %v\n", finalPath, err)
+					os.Exit(1)
+				}
+				fmt.Printf("Successfully exported to %s\n", finalPath)
 			}
-			fmt.Printf("Successfully exported to %s\n", finalPath)
 		}
 	},
 }
@@ -99,6 +140,6 @@ var exportCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(exportCmd)
 
-	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "CSV", "The format to be exported as (CSV, JSON, YAML, TOML)")
-	exportCmd.Flags().StringVarP(&exportPath, "export-path", "l", ".", "The location and name of the output file")
+	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "", "Format to be exported as (json, yaml, toml, csv)")
+	exportCmd.Flags().StringVarP(&exportPath, "export-path", "l", ".", "Location and name of the output file")
 }

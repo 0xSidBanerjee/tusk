@@ -25,7 +25,9 @@ var (
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Start the todo web application",
+	Short: "Start the Tusk web server",
+	Long: `Start the Tusk web server and serve the UI on the specified address and port.
+The SQLite database file will be created if it does not already exist.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		slog.Info("initializing database", "file", dbFile)
 		database, err := db.InitDB(dbFile)
@@ -65,7 +67,7 @@ var serveCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(serveCmd)
 
-	serveCmd.Flags().StringVarP(&address, "address", "b", "localhost", "The ip address to bind to")
-	serveCmd.Flags().IntVarP(&port, "port", "p", 8080, "The port to listen on")
+	serveCmd.Flags().StringVarP(&address, "address", "b", "localhost", "IP address to bind to")
+	serveCmd.Flags().IntVarP(&port, "port", "p", 8080, "Port to listen on")
 	serveCmd.Flags().BoolVarP(&openBrowser, "open-browser", "o", true, "Specify if app automatically opens in browser")
 }
