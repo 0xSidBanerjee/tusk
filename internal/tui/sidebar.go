@@ -96,7 +96,7 @@ func (s sidebarModel) Update(msg tea.Msg, isFocused bool, activeListID string, w
 		if isFocused {
 			switch msg.String() {
 			case "j":
-				if s.cursor < len(s.lists) {
+				if s.cursor < len(s.lists)+1 {
 					s.cursor++
 					return s, func() tea.Msg { return previewListMsg(s.getID()) }
 				}
@@ -115,17 +115,17 @@ func (s sidebarModel) Update(msg tea.Msg, isFocused bool, activeListID string, w
 				s.textInput.Focus()
 				return s, textinput.Blink
 			case "r":
-				if s.cursor > 0 {
+				if s.cursor >= 2 {
 					s.inputMode = true
 					s.renameMode = true
 					s.textInput.Placeholder = "Rename list..."
-					s.textInput.SetValue(s.lists[s.cursor-1].Name)
+					s.textInput.SetValue(s.lists[s.cursor-2].Name)
 					s.textInput.Focus()
 					return s, textinput.Blink
 				}
 			case "d":
-				if s.cursor > 0 {
-					l := s.lists[s.cursor-1]
+				if s.cursor >= 2 {
+					l := s.lists[s.cursor-2]
 					s.store.DeleteList(l.ID)
 					return s, s.fetchLists()
 				}
@@ -140,8 +140,11 @@ func (s sidebarModel) getID() string {
 	if s.cursor == 0 {
 		return "all"
 	}
-	if s.cursor > 0 && s.cursor <= len(s.lists) {
-		return s.lists[s.cursor-1].ID
+	if s.cursor == 1 {
+		return "completed"
+	}
+	if s.cursor >= 2 && s.cursor <= len(s.lists)+1 {
+		return s.lists[s.cursor-2].ID
 	}
 	return "all"
 }
@@ -183,13 +186,32 @@ func (s sidebarModel) View(isFocused bool, activeListID string, totalWidth int) 
 		allTasksStyle = allTasksStyle.Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
 	}
 	content += allTasksStyle.Width(sidebarWidth - 2).Render(label) + "\n"
+
+	// Completed
+	isActiveComp := activeListID == "completed"
+	isCursorComp := s.cursor == 1
+
+	compStyle := lipgloss.NewStyle().PaddingLeft(2)
+	labelComp := "  Completed"
+	if isCursorComp {
+		if isFocused {
+			compStyle = compStyle.Background(lipgloss.AdaptiveColor{Light: "#EEEEEE", Dark: "#2A2A2A"}).Bold(true)
+			labelComp = "> Completed"
+		} else {
+			compStyle = compStyle.Background(lipgloss.AdaptiveColor{Light: "#F5F5F5", Dark: "#1F1F1F"})
+			labelComp = "> Completed"
+		}
+	} else if isActiveComp {
+		compStyle = compStyle.Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#FFFFFF"})
+	}
+	content += compStyle.Width(sidebarWidth - 2).Render(labelComp) + "\n"
 	
 	content += "\n" + headerStyle.Render("MY LISTS") + "\n"
 	
 	for i, l := range s.lists {
 		lineStyle := lipgloss.NewStyle().PaddingLeft(2)
 		isActive := activeListID == l.ID
-		isCursor := s.cursor == i+1
+		isCursor := s.cursor == i+2
 
 		label := l.Name
 		count := fmt.Sprintf("%d", l.IncompleteCount)

@@ -60,7 +60,7 @@ func TestSQLiteStore(t *testing.T) {
 	task2 := &model.Task{Title: "Task 2", Priority: &priority}
 	store.CreateTask(task2)
 
-	tasks, total, err := store.GetAllTasks(GetAllFilters{Priority: &priority})
+	tasks, total, err := store.GetAllTasks(GetAllFilters{Priority: &priority, Status: "all"})
 	if err != nil {
 		t.Fatalf("GetAll with filter failed: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestTaskSorting(t *testing.T) {
 		}
 	}
 
-	gotTasks, _, err := store.GetAllTasks(GetAllFilters{Page: 1, PageSize: 10})
+	gotTasks, _, err := store.GetAllTasks(GetAllFilters{Page: 1, PageSize: 10, Status: "all"})
 	if err != nil {
 		t.Fatalf("GetAllTasks failed: %v", err)
 	}

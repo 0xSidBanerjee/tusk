@@ -73,7 +73,7 @@ func NewModel(store *db.SQLiteStore) Model {
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.sidebar.Init(),
-		m.taskList.fetchTasks("all", nil, nil),
+		m.taskList.fetchTasks("all", nil, ""),
 	)
 }
 
@@ -120,7 +120,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "esc":
 				if m.state == viewDetail || m.state == viewForm {
 					m.state = viewList
-					return m, m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, m.taskList.statusFilter)
+					return m, m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, "")
 				}
 			}
 		}
@@ -143,7 +143,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		
 		if m.state == viewList {
 			return m, tea.Batch(
-				m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, m.taskList.statusFilter),
+				m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, ""),
 				m.sidebar.fetchLists(),
 			)
 		}
@@ -154,12 +154,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case previewListMsg:
 		m.activeListID = string(msg)
-		return m, m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, m.taskList.statusFilter)
+		return m, m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, "")
 
 	case selectListMsg:
 		m.activeListID = string(msg)
 		m.focus = focusTaskList
-		return m, m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, m.taskList.statusFilter)
+		return m, m.taskList.fetchTasks(m.activeListID, m.taskList.priorityFilter, "")
 
 	case focusMsg:
 		m.focus = focusArea(msg)

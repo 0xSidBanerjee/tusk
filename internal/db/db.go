@@ -61,6 +61,7 @@ func createSchema(db *sql.DB) error {
 		priority TEXT,
 		deadline DATETIME,
 		status BOOLEAN NOT NULL DEFAULT 0,
+		completed_at DATETIME,
 		created_at DATETIME NOT NULL,
 		updated_at DATETIME NOT NULL
 	);`
@@ -107,10 +108,11 @@ func createSchema(db *sql.DB) error {
 				priority TEXT,
 				deadline DATETIME,
 				status BOOLEAN NOT NULL DEFAULT 0,
+				completed_at DATETIME,
 				created_at DATETIME NOT NULL,
 				updated_at DATETIME NOT NULL
 			);`,
-			"INSERT INTO tasks_new (id, list_id, title, description, priority, deadline, status, created_at, updated_at) SELECT id, list_id, title, description, priority, deadline, status, created_at, updated_at FROM tasks;",
+			"INSERT INTO tasks_new (id, list_id, title, description, priority, deadline, status, completed_at, created_at, updated_at) SELECT id, list_id, title, description, priority, deadline, status, NULL, created_at, updated_at FROM tasks;",
 			"DROP TABLE tasks;",
 			"ALTER TABLE tasks_new RENAME TO tasks;",
 			"COMMIT;",
@@ -120,6 +122,36 @@ func createSchema(db *sql.DB) error {
 			if _, err := db.Exec(q); err != nil {
 				return fmt.Errorf("failed to migrate tasks table (recreation): %w", err)
 			}
+		}
+	}
+
+	// Migration: Check if completed_at exists
+	var hasCompletedAt bool
+	rows, err = db.Query("PRAGMA table_info(tasks)")
+	if err != nil {
+		return fmt.Errorf("failed to check tasks table info for completed_at: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name string
+		var dtype string
+		var notnull int
+		var dfltValue interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "completed_at" {
+			hasCompletedAt = true
+			break
+		}
+	}
+
+	if !hasCompletedAt {
+		if _, err := db.Exec("ALTER TABLE tasks ADD COLUMN completed_at DATETIME"); err != nil {
+			return fmt.Errorf("failed to add completed_at column: %w", err)
 		}
 	}
 

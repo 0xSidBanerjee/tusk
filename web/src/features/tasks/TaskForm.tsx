@@ -56,61 +56,71 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-6">
-        {/* Main Info Section */}
-        <div className="bg-card rounded-2xl p-7 border border-muted/20 space-y-6 shadow-sm ring-1 ring-primary/5">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-primary/40">
-              <Sparkles className="w-3.5 h-3.5" />
-              <label className="text-[9px] font-black uppercase tracking-[0.2em]">The Objective</label>
+        <div className="space-y-8">
+          {/* Objective Field */}
+          <div className="space-y-3 group">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                <Sparkles className="w-3.5 h-3.5" />
+              </div>
+              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-primary/70">The Objective</label>
             </div>
-            <Input
-              autoFocus
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="What's the goal?"
-              className="h-12 text-lg font-black rounded-xl border-none shadow-none bg-transparent px-3 focus-visible:ring-0 placeholder:text-muted-foreground/20"
-            />
+            <div className="relative">
+              <Input
+                autoFocus
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="What's the goal?"
+                className="h-16 text-2xl font-black rounded-[24px] border-2 border-primary/10 bg-secondary/30 px-6 transition-all focus-visible:ring-4 focus-visible:ring-primary/10 focus-visible:border-primary/40 focus-visible:bg-background placeholder:text-muted-foreground/20 shadow-sm"
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-primary/40">
-              <AlignLeft className="w-3.5 h-3.5" />
-              <label className="text-[9px] font-black uppercase tracking-[0.2em]">Context</label>
+          {/* Context Field */}
+          <div className="space-y-3 group">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500">
+                <AlignLeft className="w-3.5 h-3.5" />
+              </div>
+              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-500/70">Context</label>
             </div>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add supplementary details..."
-              rows={3}
-              className="rounded-xl border-none shadow-none bg-transparent px-3 focus-visible:ring-0 resize-none font-medium leading-relaxed placeholder:text-muted-foreground/20 min-h-[80px]"
-            />
+            <div className="relative">
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add supplementary details..."
+                rows={4}
+                className="rounded-[24px] border-2 border-muted-foreground/10 bg-secondary/30 px-6 py-5 transition-all focus-visible:ring-4 focus-visible:ring-indigo-500/10 focus-visible:border-indigo-500/30 focus-visible:bg-background resize-none font-medium text-base leading-relaxed placeholder:text-muted-foreground/20 min-h-[140px] shadow-sm"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Properties Section */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2 group">
-            <div className="flex items-center gap-2 text-muted-foreground group-hover:text-primary transition-colors">
-              <Hash className="w-3.5 h-3.5" />
-              <label className="text-[9px] font-black uppercase tracking-[0.2em]">Workspace</label>
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-3 group">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                <Hash className="w-3.5 h-3.5" />
+              </div>
+              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-500/70">Workspace</label>
             </div>
             <Select value={listId} onValueChange={(val) => setListId(val)}>
-              <SelectTrigger className="h-12 rounded-xl bg-card border-muted/20 hover:border-primary/30 transition-all font-bold shadow-sm">
+              <SelectTrigger className="h-16 rounded-[20px] bg-secondary/30 border-2 border-muted-foreground/10 hover:border-blue-500/30 hover:bg-secondary/50 transition-all font-bold shadow-sm px-5">
                 <SelectValue placeholder="Inbox" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-2xl border-muted/20 backdrop-blur-xl bg-card/95">
-                <SelectItem value="default" className="rounded-lg py-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                    <span className="font-bold text-xs">Inbox</span>
+              <SelectContent className="rounded-2xl shadow-2xl border-muted-foreground/10 backdrop-blur-2xl bg-card/95 p-1">
+                <SelectItem value="default" className="rounded-xl py-3 pl-10 pr-4 focus:bg-blue-500/10 focus:text-blue-600 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-sm" />
+                    <span className="font-bold text-sm">Inbox</span>
                   </div>
                 </SelectItem>
                 {listsData?.data?.filter(l => l.id !== 'default').map((list) => (
-                  <SelectItem key={list.id} value={list.id} className="rounded-lg py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: list.color }} />
-                      <span className="font-bold text-xs">{list.name}</span>
+                  <SelectItem key={list.id} value={list.id} className="rounded-xl py-3 pl-10 pr-4 focus:bg-blue-500/10 focus:text-blue-600 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: list.color }} />
+                      <span className="font-bold text-sm">{list.name}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -118,57 +128,61 @@ export function TaskForm({ initialData, onSubmit, onCancel }: TaskFormProps) {
             </Select>
           </div>
 
-          <div className="space-y-2 group">
-            <div className="flex items-center gap-2 text-muted-foreground group-hover:text-primary transition-colors">
-              <Flag className="w-3.5 h-3.5" />
-              <label className="text-[9px] font-black uppercase tracking-[0.2em]">Priority</label>
+          <div className="space-y-3 group">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+                <Flag className="w-3.5 h-3.5" />
+              </div>
+              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-500/70">Priority</label>
             </div>
             <Select value={priority || "none"} onValueChange={(val) => setPriority(val === "none" ? undefined : val as Priority)}>
-              <SelectTrigger className="h-12 rounded-xl bg-card border-muted/20 hover:border-primary/30 transition-all font-bold shadow-sm">
+              <SelectTrigger className="h-16 rounded-[20px] bg-secondary/30 border-2 border-muted-foreground/10 hover:border-amber-500/30 hover:bg-secondary/50 transition-all font-bold shadow-sm px-5">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-2xl border-muted/20 backdrop-blur-xl bg-card/95">
-                <SelectItem value="none" className="rounded-lg py-2 text-xs font-bold">None</SelectItem>
-                <SelectItem value="High" className="rounded-lg py-2"><span className="text-red-500 font-bold text-xs">High</span></SelectItem>
-                <SelectItem value="Medium" className="rounded-lg py-2"><span className="text-yellow-500 font-bold text-xs">Medium</span></SelectItem>
-                <SelectItem value="Low" className="rounded-lg py-2"><span className="text-blue-500 font-bold text-xs">Low</span></SelectItem>
+              <SelectContent className="rounded-2xl shadow-2xl border-muted-foreground/10 backdrop-blur-2xl bg-card/95 p-1">
+                <SelectItem value="none" className="rounded-xl py-3 pl-10 pr-4 text-sm font-bold focus:bg-muted/20">None</SelectItem>
+                <SelectItem value="High" className="rounded-xl py-3 pl-10 pr-4 focus:bg-red-500/10 transition-colors"><span className="text-red-500 font-black text-sm">High</span></SelectItem>
+                <SelectItem value="Medium" className="rounded-xl py-3 pl-10 pr-4 focus:bg-amber-500/10 transition-colors"><span className="text-amber-500 font-black text-sm">Medium</span></SelectItem>
+                <SelectItem value="Low" className="rounded-xl py-3 pl-10 pr-4 focus:bg-blue-500/10 transition-colors"><span className="text-blue-500 font-black text-sm">Low</span></SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         {/* Date Section */}
-        <div className="space-y-2 group">
-          <div className="flex items-center gap-2 text-muted-foreground group-hover:text-primary transition-colors">
-            <CalendarIcon className="w-3.5 h-3.5" />
-            <label className="text-[9px] font-black uppercase tracking-[0.2em]">Target Deadline</label>
+        <div className="space-y-3 group">
+          <div className="flex items-center gap-2.5 px-1">
+            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500">
+              <CalendarIcon className="w-3.5 h-3.5" />
+            </div>
+            <label className="text-[11px] font-black uppercase tracking-[0.2em] text-rose-500/70">Target Deadline</label>
           </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 className={cn(
-                  "w-full h-12 rounded-xl justify-between px-4 bg-card border-muted/20 hover:border-primary/30 transition-all font-bold shadow-sm",
-                  !deadline && "text-muted-foreground/50 font-medium"
+                  "w-full h-16 rounded-[20px] justify-between px-6 bg-secondary/30 border-2 border-muted-foreground/10 hover:border-rose-500/30 hover:bg-secondary/50 transition-all font-bold shadow-sm",
+                  !deadline && "text-muted-foreground/20 font-medium"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="w-4 h-4 opacity-50" />
-                  {deadline ? format(deadline, "PPP") : <span>Select a date...</span>}
+                <div className="flex items-center gap-3">
+                  <CalendarIcon className="w-4 h-4 text-rose-500/50" />
+                  {deadline ? format(deadline, "PPP") : <span className="text-muted-foreground/30">Select a date...</span>}
                 </div>
-                <ChevronDown className="w-4 h-4 opacity-30" />
+                <ChevronDown className="w-4 h-4 opacity-20" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 rounded-2xl shadow-2xl border-muted/20 overflow-hidden backdrop-blur-xl bg-card/95" align="start">
+            <PopoverContent className="w-auto p-0 rounded-3xl shadow-2xl border-muted-foreground/10 overflow-hidden backdrop-blur-3xl bg-card/95" align="start">
               <CalendarCustom
                 selected={deadline}
                 onSelect={(date) => setDeadline(date)}
               />
-              <div className="p-3 border-t border-muted/10 bg-muted/5 flex justify-end">
+              <div className="p-4 border-t border-muted/10 bg-muted/5 flex justify-end">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-[10px] font-black uppercase tracking-widest text-primary h-7 rounded-lg"
+                  className="text-[11px] font-black uppercase tracking-widest text-primary h-8 rounded-xl hover:bg-primary/10 transition-colors"
                   onClick={() => setDeadline(undefined)}
                 >
                   Clear Date

@@ -26,7 +26,7 @@ const (
 type GetAllFilters struct {
 	ListID   string
 	Priority *model.Priority
-	Status   *bool
+	Status   string // "pending", "completed", "all" (empty defaults to pending)
 	Deadline *DeadlineFilter
 	Page     int
 	PageSize int
@@ -72,9 +72,9 @@ func (s *SQLiteStore) CreateTask(task *model.Task) error {
 	task.CreatedAt = now
 	task.UpdatedAt = now
 
-	query := `INSERT INTO tasks (id, list_id, title, description, priority, deadline, status, created_at, updated_at) 
-	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := s.db.Exec(query, task.ID, task.ListID, task.Title, task.Description, task.Priority, task.Deadline, task.Status, task.CreatedAt, task.UpdatedAt)
+	query := `INSERT INTO tasks (id, list_id, title, description, priority, deadline, status, completed_at, created_at, updated_at) 
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err := s.db.Exec(query, task.ID, task.ListID, task.Title, task.Description, task.Priority, task.Deadline, task.Status, task.CompletedAt, task.CreatedAt, task.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create task: %w", err)
 	}
@@ -99,10 +99,15 @@ func (s *SQLiteStore) GetAllTasks(filters GetAllFilters) ([]model.Task, int, err
 		args = append(args, *filters.Priority)
 	}
 
-	if filters.Status != nil {
+	if filters.Status != "" && filters.Status != "all" {
+		isDone := filters.Status == "completed"
 		whereClauses = append(whereClauses, "status = ?")
-		args = append(args, *filters.Status)
+		args = append(args, isDone)
+	} else if filters.Status == "" {
+		// Default to pending tasks
+		whereClauses = append(whereClauses, "status = 0")
 	}
+	// If Status is "all", we don't add any status clause
 
 	if filters.Deadline != nil {
 		now := time.Now()
@@ -153,11 +158,12 @@ func (s *SQLiteStore) GetAllTasks(filters GetAllFilters) ([]model.Task, int, err
 	offset := (filters.Page - 1) * filters.PageSize
 
 	dataQuery := fmt.Sprintf(`
-		SELECT id, list_id, title, description, priority, deadline, status, created_at, updated_at 
+		SELECT id, list_id, title, description, priority, deadline, status, completed_at, created_at, updated_at 
 		FROM tasks %s 
 		ORDER BY 
 			CASE WHEN status = 0 AND deadline < datetime('now') THEN 0 ELSE 1 END ASC,
 			status ASC, 
+			completed_at DESC,
 			deadline IS NULL ASC,
 			deadline ASC,
 			CASE priority 
@@ -179,7 +185,7 @@ func (s *SQLiteStore) GetAllTasks(filters GetAllFilters) ([]model.Task, int, err
 	var tasks []model.Task
 	for rows.Next() {
 		var t model.Task
-		err := rows.Scan(&t.ID, &t.ListID, &t.Title, &t.Description, &t.Priority, &t.Deadline, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+		err := rows.Scan(&t.ID, &t.ListID, &t.Title, &t.Description, &t.Priority, &t.Deadline, &t.Status, &t.CompletedAt, &t.CreatedAt, &t.UpdatedAt)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan task: %w", err)
 		}
@@ -190,9 +196,9 @@ func (s *SQLiteStore) GetAllTasks(filters GetAllFilters) ([]model.Task, int, err
 }
 
 func (s *SQLiteStore) GetTaskByID(id string) (*model.Task, error) {
-	query := "SELECT id, list_id, title, description, priority, deadline, status, created_at, updated_at FROM tasks WHERE id = ?"
+	query := "SELECT id, list_id, title, description, priority, deadline, status, completed_at, created_at, updated_at FROM tasks WHERE id = ?"
 	var t model.Task
-	err := s.db.QueryRow(query, id).Scan(&t.ID, &t.ListID, &t.Title, &t.Description, &t.Priority, &t.Deadline, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+	err := s.db.QueryRow(query, id).Scan(&t.ID, &t.ListID, &t.Title, &t.Description, &t.Priority, &t.Deadline, &t.Status, &t.CompletedAt, &t.CreatedAt, &t.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -204,8 +210,17 @@ func (s *SQLiteStore) GetTaskByID(id string) (*model.Task, error) {
 
 func (s *SQLiteStore) UpdateTask(task *model.Task) error {
 	task.UpdatedAt = time.Now()
-	query := `UPDATE tasks SET list_id = ?, title = ?, description = ?, priority = ?, deadline = ?, status = ?, updated_at = ? WHERE id = ?`
-	res, err := s.db.Exec(query, task.ListID, task.Title, task.Description, task.Priority, task.Deadline, task.Status, task.UpdatedAt, task.ID)
+	
+	// Handle completed_at logic
+	if task.Status && task.CompletedAt == nil {
+		now := time.Now()
+		task.CompletedAt = &now
+	} else if !task.Status {
+		task.CompletedAt = nil
+	}
+
+	query := `UPDATE tasks SET list_id = ?, title = ?, description = ?, priority = ?, deadline = ?, status = ?, completed_at = ?, updated_at = ? WHERE id = ?`
+	res, err := s.db.Exec(query, task.ListID, task.Title, task.Description, task.Priority, task.Deadline, task.Status, task.CompletedAt, task.UpdatedAt, task.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}

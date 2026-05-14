@@ -40,6 +40,18 @@ make build
 
 # Import
 ./tusk import --format csv --input-file tasks.csv
+
+### Quick Add & List
+```bash
+# Add a task with quick-add syntax
+./tusk add "Fix login bug | high | tomorrow"
+
+# List pending tasks
+./tusk list
+
+# List completed tasks
+./tusk list --status completed
+```
 ```
 
 ## CLI Reference
@@ -52,6 +64,18 @@ Interactive terminal interface.
 - `d`: Delete task
 - `x`: Toggle status
 - `?`: Help
+
+### `add`
+Add a task using quick-add syntax.
+- Syntax: `"Title | Priority | Deadline"`
+- Example: `./tusk add "Buy coffee | high | today"`
+
+### `list`
+List tasks with filters and sorting.
+- `--priority`: Filter by priority (high, medium, low)
+- `--status`: Filter by status (pending, completed, all)
+- `--deadline`: Filter by deadline (today, overdue, this-week)
+- Example: `./tusk list --priority high --deadline today`
 
 ### `serve`
 Start the web server and API.

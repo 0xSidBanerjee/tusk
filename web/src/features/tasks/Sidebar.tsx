@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getLists, createList, updateList, deleteList } from "../../api/lists";
 import { List } from "../../types/task";
 import { cn } from "@/lib/utils";
-import { Plus, MoreVertical, Trash2, Edit2, Check, X, Inbox, LayoutList, Sun, Moon } from "lucide-react";
+import { Plus, MoreVertical, Trash2, Edit2, Check, X, Inbox, LayoutList, Sun, Moon, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/useTheme";
 import {
@@ -135,6 +135,22 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
             )}>
               {totalIncomplete}
             </span>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveListId("completed")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-300 group relative mt-1",
+              activeListId === "completed" 
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className={cn("w-4 h-4", activeListId === "completed" ? "text-primary-foreground" : "text-primary")} />
+              <span className="text-sm font-bold">Completed</span>
+            </div>
           </motion.button>
         </div>
 

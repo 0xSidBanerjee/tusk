@@ -18,7 +18,6 @@ type taskListModel struct {
 	
 	// Filtering
 	priorityFilter *model.Priority
-	statusFilter   *bool
 	showFilterBar  bool
 	
 	// Confirmation
@@ -36,17 +35,21 @@ type fetchedTasksMsg struct {
 	total int
 }
 
-func (t taskListModel) fetchTasks(listID string, priority *model.Priority, status *bool) tea.Cmd {
+func (t taskListModel) fetchTasks(listID string, priority *model.Priority, status string) tea.Cmd {
 	return func() tea.Msg {
 		filters := db.GetAllFilters{
 			Page:     1,
 			PageSize: 100,
 		}
-		if listID != "all" {
+		if listID != "all" && listID != "completed" {
 			filters.ListID = listID
 		}
 		filters.Priority = priority
-		filters.Status = status
+		if listID == "completed" {
+			filters.Status = "completed"
+		} else {
+			filters.Status = status
+		}
 
 		tasks, total, err := t.store.GetAllTasks(filters)
 		if err != nil {
@@ -57,7 +60,7 @@ func (t taskListModel) fetchTasks(listID string, priority *model.Priority, statu
 }
 
 func (t taskListModel) Init() tea.Cmd {
-	return t.fetchTasks("all", nil, nil)
+	return t.fetchTasks("all", nil, "")
 }
 
 func (t taskListModel) Update(msg tea.Msg, isFocused bool, activeListID string, totalWidth int, lists []model.List) (taskListModel, tea.Cmd) {
@@ -75,14 +78,10 @@ func (t taskListModel) Update(msg tea.Msg, isFocused bool, activeListID string, 
 			switch msg.String() {
 			case "p":
 				t.cyclePriorityFilter()
-				return t, t.fetchTasks(activeListID, t.priorityFilter, t.statusFilter)
-			case "s":
-				t.cycleStatusFilter()
-				return t, t.fetchTasks(activeListID, t.priorityFilter, t.statusFilter)
+				return t, t.fetchTasks(activeListID, t.priorityFilter, "")
 			case "c":
 				t.priorityFilter = nil
-				t.statusFilter = nil
-				return t, t.fetchTasks(activeListID, t.priorityFilter, t.statusFilter)
+				return t, t.fetchTasks(activeListID, t.priorityFilter, "")
 			case "esc", "/":
 				t.showFilterBar = false
 				return t, nil
@@ -96,7 +95,7 @@ func (t taskListModel) Update(msg tea.Msg, isFocused bool, activeListID string, 
 				if len(t.tasks) > 0 {
 					t.store.DeleteTask(t.tasks[t.cursor].ID)
 					t.confirmDelete = false
-					return t, t.fetchTasks(activeListID, t.priorityFilter, t.statusFilter)
+					return t, t.fetchTasks(activeListID, t.priorityFilter, "")
 				}
 			case "n", "esc":
 				t.confirmDelete = false
@@ -126,7 +125,7 @@ func (t taskListModel) Update(msg tea.Msg, isFocused bool, activeListID string, 
 					task := t.tasks[t.cursor]
 					task.Status = !task.Status
 					t.store.UpdateTask(&task)
-					return t, t.fetchTasks(activeListID, t.priorityFilter, t.statusFilter)
+					return t, t.fetchTasks(activeListID, t.priorityFilter, "")
 				}
 			case "enter", "o":
 				if len(t.tasks) > 0 {
@@ -170,17 +169,6 @@ func (t *taskListModel) cyclePriorityFilter() {
 	}
 }
 
-func (t *taskListModel) cycleStatusFilter() {
-	if t.statusFilter == nil {
-		pending := false
-		t.statusFilter = &pending
-	} else if *t.statusFilter == false {
-		done := true
-		t.statusFilter = &done
-	} else {
-		t.statusFilter = nil
-	}
-}
 
 func (t taskListModel) View(isFocused bool, activeListID string, totalWidth int, lists []model.List) string {
 	sidebarWidth := totalWidth / 4
@@ -199,7 +187,9 @@ func (t taskListModel) View(isFocused bool, activeListID string, totalWidth int,
 
 	// Header
 	listName := "All Tasks"
-	if activeListID != "all" {
+	if activeListID == "completed" {
+		listName = "Completed"
+	} else if activeListID != "all" {
 		for _, l := range lists {
 			if l.ID == activeListID {
 				listName = l.Name
@@ -226,31 +216,38 @@ func (t taskListModel) View(isFocused bool, activeListID string, totalWidth int,
 	} else {
 		innerListWidth := taskListWidth - 4
 		
-		// Separate incomplete and completed
-		var incomplete, completed []int
-		for i, task := range t.tasks {
-			if task.Status {
-				completed = append(completed, i)
-			} else {
-				incomplete = append(incomplete, i)
+		if activeListID == "completed" {
+			for i, task := range t.tasks {
+				line := t.renderTaskLine(task, i == t.cursor, isFocused, innerListWidth, activeListID, lists)
+				content += line + "\n"
 			}
-		}
+		} else {
+			// Separate incomplete and completed
+			var incomplete, completed []int
+			for i, task := range t.tasks {
+				if task.Status {
+					completed = append(completed, i)
+				} else {
+					incomplete = append(incomplete, i)
+				}
+			}
 
-		for _, idx := range incomplete {
-			line := t.renderTaskLine(t.tasks[idx], idx == t.cursor, isFocused, innerListWidth, activeListID, lists)
-			content += line + "\n"
-		}
-
-		if len(completed) > 0 {
-			separator := lipgloss.NewStyle().
-				Foreground(lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#505050"}).
-				Margin(1, 0).
-				Render(fmt.Sprintf("── Completed (%d) ──", len(completed)))
-			content += separator + "\n"
-			
-			for _, idx := range completed {
+			for _, idx := range incomplete {
 				line := t.renderTaskLine(t.tasks[idx], idx == t.cursor, isFocused, innerListWidth, activeListID, lists)
 				content += line + "\n"
+			}
+
+			if len(completed) > 0 {
+				separator := lipgloss.NewStyle().
+					Foreground(lipgloss.AdaptiveColor{Light: "#A0A0A0", Dark: "#505050"}).
+					Margin(1, 0).
+					Render(fmt.Sprintf("── Completed (%d) ──", len(completed)))
+				content += separator + "\n"
+				
+				for _, idx := range completed {
+					line := t.renderTaskLine(t.tasks[idx], idx == t.cursor, isFocused, innerListWidth, activeListID, lists)
+					content += line + "\n"
+				}
 			}
 		}
 	}
@@ -304,7 +301,7 @@ func (t taskListModel) renderTaskLine(task model.Task, isSelected bool, isFocuse
 	
 	// List badge immediately after title
 	badge := ""
-	if activeListID == "all" && task.ListID != nil {
+	if (activeListID == "all" || activeListID == "completed") && task.ListID != nil {
 		for _, l := range lists {
 			if l.ID == *task.ListID {
 				badge = lipgloss.NewStyle().
@@ -349,17 +346,8 @@ func (t taskListModel) renderFilterBar(width int) string {
 		pFilter = string(*t.priorityFilter)
 	}
 	
-	sFilter := "All"
-	if t.statusFilter != nil {
-		if *t.statusFilter {
-			sFilter = "Done"
-		} else {
-			sFilter = "Pending"
-		}
-	}
-	
 	return lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder(), true, false, false, false).
 		Width(width).
-		Render(fmt.Sprintf("  Filter: Priority [%s]  Status [%s]  [c] clear", pFilter, sFilter))
+		Render(fmt.Sprintf("  Filter: Priority [%s]  [c] clear", pFilter))
 }

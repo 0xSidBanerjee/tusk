@@ -18,6 +18,7 @@ export interface Task {
   priority?: Priority;
   deadline?: string;
   status: boolean;
+  completed_at?: string;
   created_at: string;
   updated_at: string;
 }

@@ -104,12 +104,13 @@ func (h *Handler) GetTasks(c *gin.Context) {
 	}
 
 	if s := c.Query("status"); s != "" {
-		status, err := strconv.ParseBool(s)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid status filter"})
-			return
+		if s == "true" {
+			filters.Status = "completed"
+		} else if s == "false" {
+			filters.Status = "pending"
+		} else {
+			filters.Status = s
 		}
-		filters.Status = &status
 	}
 
 	if p := c.Query("page"); p != "" {

@@ -19,7 +19,6 @@ export function TaskList() {
   const queryClient = useQueryClient();
   const { activeListId, setActiveListId } = useActiveList();
   const [priority, setPriority] = useState<Priority>();
-  const [status, setStatus] = useState<boolean>();
   const [page, setPage] = useState(1);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
@@ -47,6 +46,21 @@ export function TaskList() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Close form on Escape
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsFormOpen(false);
+        setEditingTask(null);
+        setIsDataModalOpen(false);
+      }
+    };
+    if (isFormOpen || !!editingTask || isDataModalOpen) {
+      window.addEventListener("keydown", handleEsc);
+    }
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isFormOpen, editingTask, isDataModalOpen]);
+
   // Persist density
   useEffect(() => {
     localStorage.setItem("tusk_density", density);
@@ -68,14 +82,16 @@ export function TaskList() {
 
   const activeList = activeListId === "all" 
     ? { name: "All Tasks", color: "hsl(var(--primary))" } 
+    : activeListId === "completed"
+    ? { name: "Completed", color: "hsl(var(--primary))" }
     : listsData?.data?.find(l => l.id === activeListId) || { name: "Inbox", color: "#6366f1" };
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["tasks", { activeListId, priority, status, page }],
+    queryKey: ["tasks", { activeListId, priority, page }],
     queryFn: () => getTasks({ 
-      list_id: activeListId === "all" ? undefined : activeListId,
+      list_id: ["all", "completed"].includes(activeListId) ? undefined : activeListId,
       priority, 
-      status, 
+      status: activeListId === "completed" ? true : undefined, 
       page, 
       page_size: 10 
     }),
@@ -103,7 +119,7 @@ export function TaskList() {
         const isMovedFromOtherList = activeListId !== "default";
 
         if (isMovedFromInbox || isMovedFromOtherList) {
-          queryClient.setQueryData(["tasks", { activeListId, priority, status, page }], (old: any) => {
+          queryClient.setQueryData(["tasks", { activeListId, priority, page }], (old: any) => {
             if (!old) return old;
             return {
               ...old,
@@ -156,9 +172,48 @@ export function TaskList() {
   const totalIncomplete = activeListInfo?.incomplete_count || 0;
 
   let subtitle = "";
-  if (totalTasks > 0) {
+  if (activeListId === "completed") {
+    subtitle = `${data?.total || 0} tasks completed`;
+  } else if (totalTasks > 0) {
     subtitle = totalIncomplete > 0 ? `${totalIncomplete} incomplete` : "All tasks completed";
   }
+
+  const groupTasksByDate = (tasks: Task[]) => {
+    const groups: { [key: string]: Task[] } = {};
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    tasks.forEach(task => {
+      let group = "Earlier";
+      if (task.completed_at) {
+        const date = new Date(task.completed_at);
+        date.setHours(0, 0, 0, 0);
+
+        if (date.getTime() === now.getTime()) group = "Today";
+        else if (date.getTime() === yesterday.getTime()) group = "Yesterday";
+        else if (date.getTime() >= sevenDaysAgo.getTime()) group = "Previous 7 Days";
+        else if (date.getTime() >= thirtyDaysAgo.getTime()) group = "Previous 30 Days";
+      }
+
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(task);
+    });
+
+    // Order keys
+    const order = ["Today", "Yesterday", "Previous 7 Days", "Previous 30 Days", "Earlier"];
+    return order.filter(key => groups[key]).map(key => ({ title: key, tasks: groups[key] }));
+  };
+
+  const groupedTasks = activeListId === "completed" ? groupTasksByDate(tasks) : null;
 
   return (
     <div className="flex h-screen bg-background overflow-hidden font-sans antialiased">
@@ -224,18 +279,12 @@ export function TaskList() {
             <QuickAddTask activeListId={activeListId} />
             <TaskFilters
               priority={priority}
-              status={status}
               onPriorityChange={(p) => {
                 setPriority(p);
                 setPage(1);
               }}
-              onStatusChange={(s) => {
-                setStatus(s);
-                setPage(1);
-              }}
               onReset={() => {
                 setPriority(undefined);
-                setStatus(undefined);
                 setPage(1);
               }}
             />
@@ -251,22 +300,52 @@ export function TaskList() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Synchronizing...</p>
               </div>
             ) : tasks.length > 0 ? (
-              <div className="grid gap-3">
-                <AnimatePresence mode="popLayout">
-                  {tasks.map((task) => (
-                    <TaskCard 
-                      key={task.id} 
-                      task={task}
-                      density={density}
-                      showListBadge={activeListId === "all"}
-                      listName={listsData?.data?.find(l => l.id === task.list_id)?.name}
-                      listColor={listsData?.data?.find(l => l.id === task.list_id)?.color}
-                      onToggleStatus={() => handleToggleStatus(task)}
-                      onEdit={setEditingTask}
-                      onDelete={(id) => deleteMutation.mutate(id)}
-                    />
-                  ))}
-                </AnimatePresence>
+              <div className="grid gap-8">
+                {groupedTasks ? (
+                  groupedTasks.map(group => (
+                    <div key={group.title} className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/50">{group.title}</h3>
+                        <div className="h-px flex-1 bg-gradient-to-r from-primary/10 to-transparent" />
+                      </div>
+                      <div className="grid gap-3">
+                        <AnimatePresence mode="popLayout">
+                          {group.tasks.map((task) => (
+                            <TaskCard 
+                              key={task.id} 
+                              task={task}
+                              density={density}
+                              showListBadge={true}
+                              listName={listsData?.data?.find(l => l.id === task.list_id)?.name}
+                              listColor={listsData?.data?.find(l => l.id === task.list_id)?.color}
+                              onToggleStatus={() => handleToggleStatus(task)}
+                              onEdit={setEditingTask}
+                              onDelete={(id) => deleteMutation.mutate(id)}
+                            />
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="grid gap-3">
+                    <AnimatePresence mode="popLayout">
+                      {tasks.map((task) => (
+                        <TaskCard 
+                          key={task.id} 
+                          task={task}
+                          density={density}
+                          showListBadge={activeListId === "all"}
+                          listName={listsData?.data?.find(l => l.id === task.list_id)?.name}
+                          listColor={listsData?.data?.find(l => l.id === task.list_id)?.color}
+                          onToggleStatus={() => handleToggleStatus(task)}
+                          onEdit={setEditingTask}
+                          onDelete={(id) => deleteMutation.mutate(id)}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
             ) : (
               <motion.div 
@@ -275,9 +354,9 @@ export function TaskList() {
                 className="flex flex-col items-center justify-center py-32 text-center"
               >
                 <p className="text-sm font-medium text-muted-foreground/40 italic">
-                  {priority || status !== undefined 
+                  {priority 
                     ? `No tasks match your current filters`
-                    : "No tasks found in this list"
+                    : "No tasks found"
                   }
                 </p>
               </motion.div>

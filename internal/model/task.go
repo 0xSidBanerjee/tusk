@@ -37,6 +37,7 @@ type Task struct {
 	Priority    *Priority  `json:"priority,omitempty"`
 	Deadline    *time.Time `json:"deadline,omitempty"`
 	Status      bool       `json:"status"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 }

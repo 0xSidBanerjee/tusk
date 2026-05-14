@@ -31,7 +31,7 @@ sorted exactly as shown in the web UI.
 
 Flags:
   --priority   Filter by priority (high, medium, low, all)
-  --status     Filter by status (pending, completed, all)
+  --status     Filter by status (pending, completed, all). By default, only pending tasks are shown.
   --deadline   Filter by deadline (today, overdue, this-week, all)
 
 Examples:
@@ -54,18 +54,8 @@ Examples:
 		}
 
 		// Status Filter (Default: pending)
-		if statusFlag != "" && strings.ToLower(statusFlag) != "all" {
-			var s bool
-			switch strings.ToLower(statusFlag) {
-			case "pending":
-				s = false
-			case "completed", "done":
-				s = true
-			default:
-				fmt.Printf("Error: invalid status '%s'\n", statusFlag)
-				os.Exit(1)
-			}
-			filters.Status = &s
+		if statusFlag != "" {
+			filters.Status = strings.ToLower(statusFlag)
 		}
 
 		// Priority Filter (Default: all)
@@ -152,12 +142,19 @@ func renderTasks(tasks []model.Task) {
 			deadline = deadlineStyle.Render(deadlineStr)
 		}
 
-		line := fmt.Sprintf("%s %s %s%s", 
+		line := fmt.Sprintf("%s %s %s", 
 			indicator, 
 			prioStyle.Render(prioIndicator), 
-			titleStyle.Render(task.Title), 
-			deadline,
+			titleStyle.Render(task.Title),
 		)
+
+		if task.Status && task.CompletedAt != nil {
+			compStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#808080")).MarginLeft(2).Italic(true)
+			line += compStyle.Render(fmt.Sprintf("completed %s", task.CompletedAt.Format("Jan 02")))
+		} else if deadline != "" {
+			line += deadline
+		}
+		
 		fmt.Println(line)
 	}
 }
