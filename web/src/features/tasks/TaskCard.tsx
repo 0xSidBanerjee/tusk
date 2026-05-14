@@ -1,7 +1,7 @@
-import { Task, Priority } from "../../types/task";
+import { Task } from "../../types/task";
 import { cn } from "../../lib/utils";
-import { Calendar, Trash2, Edit2, CheckCircle2, Circle, Check } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar, Trash2, Edit2, Check, Flag } from "lucide-react";
+import { format, isTomorrow, isToday } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +19,13 @@ interface TaskCardProps {
 export function TaskCard({ task, density = "comfortable", showListBadge, listName, listColor, onToggleStatus, onEdit, onDelete }: TaskCardProps) {
   const isOverdue = task.deadline && new Date(task.deadline) < new Date() && !task.status;
 
+  const getDeadlineText = (deadline: string) => {
+    const date = new Date(deadline);
+    if (isToday(date)) return "Today";
+    if (isTomorrow(date)) return "Tomorrow";
+    return format(date, "MMM d, yyyy");
+  };
+
   return (
     <motion.div
       layout
@@ -26,41 +33,30 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={cn(
-        "group relative flex items-start rounded-[2rem] transition-all duration-500",
-        density === "compact" ? "p-3 pl-12 gap-4" : "p-5 pl-14 gap-5",
-        task.status 
-          ? "opacity-40" 
-          : "hover:bg-muted/20"
+        "group relative flex items-start rounded-3xl transition-all duration-500 bg-card border border-transparent hover:border-border hover:shadow-xl hover:shadow-black/5",
+        density === "compact" ? "p-3 pl-12 gap-4" : "p-6 pl-14 gap-6",
+        task.status && "opacity-60"
       )}
     >
-      {/* High Priority Left Accent - Keeping the user-loved feature but refined */}
-      {task.priority === "High" && !task.status && (
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-1.5 h-1/2 bg-red-500 rounded-full shadow-[0_0_15px_rgba(239,68,68,0.4)]" />
-      )}
-
-      {/* Outstanding Squircle Checkbox */}
-      <div className="flex-shrink-0 mt-0.5">
+      {/* Outstanding Circular Checkbox */}
+      <div className="flex-shrink-0 mt-1">
         <motion.button
           whileTap={{ scale: 0.85 }}
           onClick={() => onToggleStatus(task)}
           className={cn(
-            "w-6 h-6 rounded-[0.6rem] border-2 flex items-center justify-center transition-all duration-500 relative overflow-hidden",
+            "w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all duration-500 relative overflow-hidden",
             task.status 
               ? "bg-primary border-primary shadow-lg shadow-primary/20" 
-              : "border-muted-foreground/10 bg-card hover:border-primary/40 hover:scale-110 shadow-sm"
+              : "border-muted-foreground/20 bg-background hover:border-primary/40 hover:scale-110 shadow-sm"
           )}
         >
-          {/* Subtle inner glow for the checkbox */}
-          {!task.status && <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />}
-          
           <AnimatePresence mode="wait">
             {task.status && (
               <motion.div
                 key="check"
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -10, opacity: 0 }}
-                transition={{ type: "spring", damping: 12, stiffness: 200 }}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.5, opacity: 0 }}
               >
                 <Check className="w-4 h-4 text-primary-foreground stroke-[3]" />
               </motion.div>
@@ -70,101 +66,75 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
-          {/* Priority Dot - Restored as per user preference */}
-          {!task.status && task.priority && task.priority !== "High" && (
-            <div className={cn(
-              "w-2 h-2 rounded-full shadow-sm",
-              task.priority === "Medium" ? "bg-amber-400" : "bg-sky-400"
-            )} />
+        {/* Title Row */}
+        <h3 className={cn(
+          "transition-all duration-300 truncate tracking-tight mb-2",
+          density === "compact" ? "text-sm" : "text-lg",
+          task.status ? "text-muted-foreground font-normal line-through" : "text-foreground font-bold",
+        )}>
+          {task.title}
+        </h3>
+
+        {/* Metadata Row */}
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* List/Project Badge */}
+          {listName && (
+            <div className="flex items-center gap-1.5">
+              <div 
+                className="w-2 h-2 rounded-full shadow-sm" 
+                style={{ backgroundColor: listColor || 'hsl(var(--muted-foreground))' }} 
+              />
+              <span className="text-xs text-muted-foreground font-medium">{listName}</span>
+            </div>
           )}
 
-          <h3 className={cn(
-            "transition-all duration-300 truncate tracking-tight",
-            density === "compact" ? "text-sm" : "text-base",
-            task.status ? "text-muted-foreground font-normal" : "text-foreground font-bold",
+          {/* Deadline Badge */}
+          <div className={cn(
+            "flex items-center gap-1.5 text-xs font-medium",
+            isOverdue ? "text-red-500" : "text-muted-foreground"
           )}>
-            {task.title}
-          </h3>
+            <Calendar className="w-3.5 h-3.5 opacity-50" />
+            <span>{task.deadline ? getDeadlineText(task.deadline) : "No due date"}</span>
+          </div>
 
-          {/* List Badge - Hide if completed as we show list name below */}
-          {showListBadge && listName && !task.status && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/30 border border-muted/5">
-              <div className="w-1 h-1 rounded-full" style={{ backgroundColor: listColor }} />
-              <span className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-tighter">
-                {listName}
-              </span>
+          {/* Priority Pill */}
+          {task.priority && (
+            <div className={cn(
+              "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border transition-colors",
+              task.priority === "High" ? "bg-red-500/10 border-red-500/20 text-red-500" :
+              task.priority === "Medium" ? "bg-orange-500/10 border-orange-500/20 text-orange-500" :
+              "bg-muted border-border text-muted-foreground"
+            )}>
+              <Flag className="w-3 h-3" />
+              {task.priority} Priority
             </div>
           )}
         </div>
 
-        {/* List Name and Completion Info for Done Tasks */}
-        {task.status && (
-          <div className="flex flex-col gap-0.5 mb-1.5">
-            {listName && (
-              <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-wider">
-                {listName}
-              </span>
-            )}
-            {task.completed_at && (
-              <span className="text-[10px] font-medium text-muted-foreground/60">
-                Completed: {(() => {
-                  const date = new Date(task.completed_at);
-                  const now = new Date();
-                  const yesterday = new Date();
-                  yesterday.setDate(now.getDate() - 1);
-                  
-                  const isToday = date.toDateString() === now.toDateString();
-                  const isYesterday = date.toDateString() === yesterday.toDateString();
-                  
-                  if (isToday) return `Today, ${format(date, "h:mm aa")}`;
-                  if (isYesterday) return `Yesterday, ${format(date, "h:mm aa")}`;
-                  return format(date, "MM/dd/yy, h:mm aa");
-                })()}
-              </span>
-            )}
-          </div>
-        )}
-
         {task.description && !task.status && (
-          <p className={cn(
-            "text-xs text-muted-foreground/50 line-clamp-2 leading-relaxed transition-all duration-500",
-            density === "compact" ? "mt-0" : "mt-1.5",
-            task.status && "opacity-30"
-          )}>
+          <p className="text-sm text-muted-foreground/60 mt-3 line-clamp-2 leading-relaxed">
             {task.description}
           </p>
         )}
-
-        {task.deadline && !task.status && (
-          <div className={cn(
-            "flex items-center gap-1.5 font-black transition-all duration-500",
-            density === "compact" ? "mt-1.5 text-[10px]" : "mt-3 text-[11px]",
-            isOverdue ? "text-amber-500" : "text-muted-foreground/20"
-          )}>
-            <Calendar className={cn(density === "compact" ? "w-3 h-3" : "w-3.5 h-3.5")} />
-            {format(new Date(task.deadline), "MMM d, yyyy")}
-          </div>
-        )}
       </div>
 
-      {/* Action Buttons - More subtle until hover */}
+      {/* Action Buttons - Subtle until hover */}
       <div className="flex flex-row gap-1 opacity-0 group-hover:opacity-100 transition-all duration-500 ml-auto pl-4 items-center">
         <Button
           size="icon"
           variant="ghost"
-          className="h-9 w-9 rounded-2xl hover:bg-muted transition-all"
+          className="h-9 w-9 rounded-full hover:bg-muted transition-all"
           onClick={() => onEdit(task)}
         >
-          <Edit2 className="w-4 h-4 text-muted-foreground/30 group-hover:text-foreground" />
+          <Edit2 className="w-4 h-4 text-muted-foreground/40" />
         </Button>
         <Button
           size="icon"
           variant="ghost"
-          className="h-9 w-9 rounded-2xl hover:bg-destructive/10 hover:text-destructive transition-all"
+          className="h-9 w-9 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all"
           onClick={() => onDelete(task.id)}
         >
-          <Trash2 className="w-4 h-4 text-muted-foreground/30 group-hover:text-destructive" />
+          <Trash2 className="w-4 h-4 text-muted-foreground/40" />
         </Button>
       </div>
     </motion.div>

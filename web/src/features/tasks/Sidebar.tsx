@@ -101,7 +101,7 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
         
         <button
           onClick={toggleTheme}
-          className="p-1.5 rounded-lg border bg-card hover:bg-muted transition-all shadow-sm"
+          className="p-1.5 rounded-xl border bg-card hover:bg-muted transition-all shadow-sm"
           aria-label="Toggle theme"
         >
           {theme === "light" ? (

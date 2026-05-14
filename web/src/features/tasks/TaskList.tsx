@@ -239,23 +239,6 @@ export function TaskList() {
             
              <div className="flex items-center gap-2">
                <Button
-                 variant="ghost"
-                 size="icon"
-                 onClick={() => setDensity(d => d === "comfortable" ? "compact" : "comfortable")}
-                 className={cn(
-                   "h-9 w-9 rounded-lg transition-all",
-                   density === "compact" && "bg-accent text-accent-foreground shadow-inner"
-                 )}
-                 title={density === "comfortable" ? "Comfortable" : "Compact"}
-               >
-                 {density === "comfortable" ? (
-                   <Layout className="w-4 h-4" />
-                 ) : (
-                   <ListIcon className="w-4 h-4" />
-                 )}
-               </Button>
-
-               <Button
                  variant="outline"
                  size="sm"
                  onClick={() => setIsDataModalOpen(true)}
@@ -287,6 +270,8 @@ export function TaskList() {
                 setPriority(undefined);
                 setPage(1);
               }}
+              density={density}
+              onDensityToggle={() => setDensity(d => d === "comfortable" ? "compact" : "comfortable")}
             />
           </div>
         </header>
