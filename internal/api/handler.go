@@ -152,6 +152,11 @@ type UpdateTaskRequest struct {
 	Status      *bool           `json:"status"`
 }
 
+type ClearTasksRequest struct {
+	ListID string `json:"list_id"`
+	Scope  string `json:"scope"` // "all" or "older_than_month"
+}
+
 func (h *Handler) UpdateTask(c *gin.Context) {
 	id := c.Param("id")
 	body, _ := io.ReadAll(c.Request.Body)
@@ -237,6 +242,28 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 			return
 		}
 		slog.Error("failed to delete task", "id", id, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) ClearTasks(c *gin.Context) {
+	var req ClearTasksRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var olderThan *time.Time
+	if req.Scope == "older_than_month" {
+		t := time.Now().AddDate(0, -1, 0)
+		olderThan = &t
+	}
+
+	if err := h.taskStore.ClearTasks(req.ListID, olderThan); err != nil {
+		slog.Error("failed to clear tasks", "list_id", req.ListID, "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
@@ -549,6 +576,7 @@ func (h *Handler) RegisterRoutes(router *gin.Engine, assets fs.FS) {
 		v1.PUT("/tasks/:id", h.UpdateTask)
 		v1.PATCH("/tasks/:id", h.UpdateTask)
 		v1.DELETE("/tasks/:id", h.DeleteTask)
+		v1.POST("/tasks/clear", h.ClearTasks)
 
 		v1.POST("/lists", h.CreateList)
 		v1.GET("/lists", h.GetLists)

@@ -30,3 +30,7 @@ export const updateTask = async (id: string, task: Partial<Task>) => {
 export const deleteTask = async (id: string) => {
   await api.delete(`/tasks/${id}`);
 };
+
+export const clearTasks = async (params: { list_id: string; scope: "all" | "older_than_month" }) => {
+  await api.post("/tasks/clear", params);
+};
