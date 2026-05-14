@@ -8,7 +8,7 @@ COPY web/ ./
 RUN npm run build
 
 # Stage 2: Build the Go backend
-FROM golang:1.22-alpine AS backend
+FROM golang:1.26-alpine AS backend
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
