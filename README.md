@@ -40,6 +40,7 @@ make build
 
 # Import
 ./tusk import --format csv --input-file tasks.csv
+```
 
 ### Quick Add & List
 ```bash
@@ -51,7 +52,6 @@ make build
 
 # List completed tasks
 ./tusk list --status completed
-```
 ```
 
 ## CLI Reference
