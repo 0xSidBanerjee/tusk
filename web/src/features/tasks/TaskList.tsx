@@ -12,9 +12,13 @@ import { DataManagement } from "./DataManagement";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import { useActiveList } from "../../hooks/useActiveList";
 import { cn } from "@/lib/utils";
-import { Plus, ChevronLeft, ChevronRight, Loader2, LayoutList, Database, Edit2, Layout, List as ListIcon, Maximize2, CheckCircle2, Inbox } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Loader2, LayoutList, Database, Edit2, Layout, List as ListIcon, Maximize2, CheckCircle2, Inbox, Clock, Trash2, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { clearTasks } from "../../api/tasks";
+import { AlertModal } from "@/components/ui/AlertModal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 
 export function TaskList() {
   const queryClient = useQueryClient();
@@ -24,6 +28,10 @@ export function TaskList() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [clearScope, setClearScope] = useState<"all" | "older_than_month">("all");
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [density, setDensity] = useState<"comfortable" | "compact">(() => {
     return (localStorage.getItem("tusk_density") as "comfortable" | "compact") || "comfortable";
   });
@@ -92,10 +100,21 @@ export function TaskList() {
     queryFn: () => getTasks({ 
       list_id: ["all", "completed"].includes(activeListId) ? undefined : activeListId,
       priority, 
-      status: activeListId === "completed" ? true : undefined, 
+      status: activeListId === "completed" ? true : false, 
       page, 
       page_size: 10 
     }),
+  });
+
+  const { data: completedTasksData } = useQuery({
+    queryKey: ["tasks", { activeListId, status: true, scope: "inline-completed" }],
+    queryFn: () => getTasks({ 
+      list_id: ["all", "completed"].includes(activeListId) ? undefined : activeListId,
+      status: true,
+      page: 1,
+      page_size: 50
+    }),
+    enabled: showCompleted && activeListId !== "completed",
   });
 
   const createMutation = useMutation({
@@ -142,6 +161,15 @@ export function TaskList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["lists"] });
+    },
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: clearTasks,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["lists"] });
+      setIsClearModalOpen(false);
     },
   });
 
@@ -238,22 +266,40 @@ export function TaskList() {
             <div className="space-y-0.5">
               <div className="flex items-center gap-2.5">
                 {(!activeListId || activeListId === "all") ? (
-                  <LayoutList className="w-6 h-6 text-primary" />
+                  <LayoutList className="w-8 h-8 text-primary" />
                 ) : activeListId === "completed" ? (
-                  <CheckCircle2 className="w-6 h-6 text-primary" />
+                  <CheckCircle2 className="w-8 h-8 text-primary" />
                 ) : activeListId === "default" ? (
-                  <Inbox className="w-6 h-6 text-primary" />
+                  <Inbox className="w-8 h-8 text-primary" />
                 ) : (
-                  <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: activeList.color }} />
+                  <ListIcon className="w-8 h-8" style={{ color: activeList.color }} />
                 )}
-                <h2 className="text-2xl font-black tracking-tight text-foreground">{activeList.name}</h2>
+                <h2 className="text-3xl font-black tracking-tighter text-foreground">{activeList.name}</h2>
               </div>
-              <p className="text-xs font-medium text-muted-foreground/50 pl-0.5">
-                {isLoading ? "Synchronizing..." : subtitle || "No tasks yet"}
-              </p>
             </div>
             
-             <div className="flex items-center gap-2">
+             <div className="flex items-center gap-6">
+               {(activeListId !== "completed" && totalTasks > 0) && (
+                 <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-700">
+                   <div className="h-10 w-px bg-muted/20" />
+                   <motion.div 
+                     initial={{ scale: 0.8, opacity: 0 }}
+                     animate={{ scale: 1, opacity: 1 }}
+                     className="flex flex-col items-end"
+                   >
+                     <span 
+                       className="text-4xl font-black tracking-tighter leading-none"
+                       style={{ color: activeList.color }}
+                     >
+                       {totalIncomplete}
+                     </span>
+                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30 mt-1">
+                       Remaining
+                     </span>
+                   </motion.div>
+                 </div>
+               )}
+               <div className="flex items-center gap-2">
                <Button
                  variant="outline"
                  size="sm"
@@ -273,8 +319,9 @@ export function TaskList() {
                </Button>
              </div>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1">
             <QuickAddTask activeListId={activeListId} />
             <div className="h-px bg-muted-foreground/10 mx-1 my-1" />
             <TaskFilters
@@ -342,10 +389,84 @@ export function TaskList() {
                           listColor={listsData?.data?.find(l => l.id === task.list_id)?.color}
                           onToggleStatus={() => handleToggleStatus(task)}
                           onEdit={setEditingTask}
-                          onDelete={(id) => deleteMutation.mutate(id)}
+                          onDelete={(id) => setTaskToDelete(id)}
                         />
                       ))}
                     </AnimatePresence>
+
+                    {(activeListId !== "completed" && totalTasks > totalIncomplete) && (
+                      <div className="mt-12 space-y-4">
+                        <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-muted/5 border border-muted/10">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-4 h-4 text-primary" />
+                            <span className="text-[13px] font-bold text-foreground/70">
+                              {totalTasks - totalIncomplete} Completed
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-[11px] font-black uppercase tracking-widest text-muted-foreground/40">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="hover:text-red-500 transition-colors flex items-center gap-2">
+                                  Clear
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-1.5 rounded-2xl shadow-2xl border-muted-foreground/10 backdrop-blur-2xl bg-card/95" align="end">
+                                <div className="p-2 mb-1">
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Clear Completed</p>
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    setClearScope("older_than_month");
+                                    setIsClearModalOpen(true);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/30 transition-all text-xs font-bold text-foreground/70"
+                                >
+                                  <Clock className="w-3.5 h-3.5 text-rose-500" />
+                                  Older than one month
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    setClearScope("all");
+                                    setIsClearModalOpen(true);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 transition-all text-xs font-bold text-red-500"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  All completed
+                                </button>
+                              </PopoverContent>
+                            </Popover>
+
+                            <button 
+                              onClick={() => setShowCompleted(!showCompleted)}
+                              className="hover:text-primary transition-colors cursor-pointer"
+                            >
+                              {showCompleted ? "Hide" : "Show"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {showCompleted && (
+                          <div className="grid gap-3 opacity-60 hover:opacity-100 transition-opacity duration-500">
+                            <AnimatePresence mode="popLayout">
+                              {completedTasksData?.data?.map((task) => (
+                                <TaskCard 
+                                  key={task.id} 
+                                  task={task}
+                                  density={density}
+                                  showListBadge={activeListId === "all"}
+                                  listName={listsData?.data?.find(l => l.id === task.list_id)?.name}
+                                  listColor={listsData?.data?.find(l => l.id === task.list_id)?.color}
+                                  onToggleStatus={() => handleToggleStatus(task)}
+                                  onEdit={setEditingTask}
+                                  onDelete={(id) => setTaskToDelete(id)}
+                                />
+                              ))}
+                            </AnimatePresence>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -421,6 +542,24 @@ export function TaskList() {
       <DataManagement 
         isOpen={isDataModalOpen} 
         onClose={() => setIsDataModalOpen(false)} 
+      />
+
+      <AlertModal
+        isOpen={isClearModalOpen}
+        onClose={() => setIsClearModalOpen(false)}
+        onConfirm={() => clearMutation.mutate({ list_id: activeListId, scope: clearScope })}
+        title={clearScope === "all" ? "Clear all completed tasks?" : "Clear older completed tasks?"}
+        description="This action cannot be undone. All selected tasks will be permanently removed."
+        confirmLabel="Clear"
+      />
+
+      <AlertModal
+        isOpen={!!taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        onConfirm={() => taskToDelete && deleteMutation.mutate(taskToDelete)}
+        title="Delete this task?"
+        description="This cannot be undone. The task will be permanently removed from your list."
+        confirmLabel="Delete"
       />
     </div>
   );

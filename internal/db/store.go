@@ -38,6 +38,7 @@ type TaskStore interface {
 	GetTaskByID(id string) (*model.Task, error)
 	UpdateTask(task *model.Task) error
 	DeleteTask(id string) error
+	ClearTasks(listID string, olderThan *time.Time) error
 }
 
 type ListStore interface {
@@ -246,6 +247,31 @@ func (s *SQLiteStore) DeleteTask(id string) error {
 	}
 	if rows == 0 {
 		return fmt.Errorf("task not found")
+	}
+	return nil
+}
+
+func (s *SQLiteStore) ClearTasks(listID string, olderThan *time.Time) error {
+	query := `DELETE FROM tasks WHERE status = 1`
+	args := []interface{}{}
+
+	if listID != "" && listID != "all" && listID != "completed" {
+		if listID == "default" {
+			query += " AND list_id IS NULL"
+		} else {
+			query += " AND list_id = ?"
+			args = append(args, listID)
+		}
+	}
+
+	if olderThan != nil {
+		query += " AND completed_at < ?"
+		args = append(args, *olderThan)
+	}
+
+	_, err := s.db.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to clear tasks: %w", err)
 	}
 	return nil
 }

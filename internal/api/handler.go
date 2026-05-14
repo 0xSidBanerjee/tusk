@@ -143,6 +143,11 @@ func (h *Handler) GetTasks(c *gin.Context) {
 	})
 }
 
+type ClearTasksRequest struct {
+	ListID string `json:"list_id"`
+	Scope  string `json:"scope"` // "all" or "older_than_month"
+}
+
 type UpdateTaskRequest struct {
 	ListID      *string         `json:"list_id"`
 	Title       *string         `json:"title"`
@@ -242,6 +247,29 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) ClearTasks(c *gin.Context) {
+	var req ClearTasksRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var olderThan *time.Time
+	if req.Scope == "older_than_month" {
+		t := time.Now().AddDate(0, -1, 0)
+		olderThan = &t
+	}
+
+	err := h.taskStore.ClearTasks(req.ListID, olderThan)
+	if err != nil {
+		slog.Error("failed to clear tasks", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "tasks cleared"})
 }
 
 type CreateListRequest struct {
@@ -549,6 +577,7 @@ func (h *Handler) RegisterRoutes(router *gin.Engine, assets fs.FS) {
 		v1.PUT("/tasks/:id", h.UpdateTask)
 		v1.PATCH("/tasks/:id", h.UpdateTask)
 		v1.DELETE("/tasks/:id", h.DeleteTask)
+		v1.POST("/tasks/clear", h.ClearTasks)
 
 		v1.POST("/lists", h.CreateList)
 		v1.GET("/lists", h.GetLists)
