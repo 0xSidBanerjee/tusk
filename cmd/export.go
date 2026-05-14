@@ -56,7 +56,7 @@ Examples:
 
 		store := db.NewSQLiteStore(database)
 		// Fetch all tasks with no limits
-		tasks, _, err := store.GetAllTasks(db.GetAllFilters{Page: 1, PageSize: 1000000})
+		tasks, _, err := store.GetAllTasks(db.GetAllFilters{Page: 1, PageSize: 1000000, Status: "all"})
 		if err != nil {
 			fmt.Printf("Error: failed to fetch tasks: %v\n", err)
 			os.Exit(1)

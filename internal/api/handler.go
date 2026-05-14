@@ -339,7 +339,7 @@ func (h *Handler) UpdateList(c *gin.Context) {
 func (h *Handler) Export(c *gin.Context) {
 	format := c.DefaultQuery("format", "json")
 	
-	tasks, _, err := h.taskStore.GetAllTasks(db.GetAllFilters{Page: 1, PageSize: 1000000})
+	tasks, _, err := h.taskStore.GetAllTasks(db.GetAllFilters{Page: 1, PageSize: 1000000, Status: "all"})
 	if err != nil {
 		slog.Error("failed to get tasks for export", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})

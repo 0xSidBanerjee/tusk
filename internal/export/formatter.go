@@ -29,6 +29,7 @@ type ExportTask struct {
 	Priority    *string    `json:"Priority,omitempty" yaml:"Priority,omitempty" toml:"Priority,omitempty"`
 	Deadline    *time.Time  `json:"Deadline,omitempty" yaml:"Deadline,omitempty" toml:"Deadline,omitempty"`
 	Status      bool       `json:"Status" yaml:"Status" toml:"Status"`
+	CompletedAt *time.Time `json:"CompletedAt,omitempty" yaml:"CompletedAt,omitempty" toml:"CompletedAt,omitempty"`
 	CreatedAt   time.Time  `json:"CreatedAt" yaml:"CreatedAt" toml:"CreatedAt"`
 	UpdatedAt   *time.Time `json:"UpdatedAt,omitempty" yaml:"UpdatedAt,omitempty" toml:"UpdatedAt,omitempty"`
 }
@@ -88,6 +89,12 @@ func prepareExportData(lists []model.List, tasks []model.Task) ExportData {
 			updatedAt = &ut
 		}
 
+		var completedAt *time.Time
+		if t.CompletedAt != nil {
+			ct := t.CompletedAt.UTC()
+			completedAt = &ct
+		}
+
 		exportTasks = append(exportTasks, ExportTask{
 			Title:       t.Title,
 			Description: t.Description,
@@ -95,6 +102,7 @@ func prepareExportData(lists []model.List, tasks []model.Task) ExportData {
 			Priority:    priority,
 			Deadline:    t.Deadline,
 			Status:      t.Status,
+			CompletedAt: completedAt,
 			CreatedAt:   t.CreatedAt.UTC(),
 			UpdatedAt:   updatedAt,
 		})
@@ -126,7 +134,7 @@ func (f *CSVFormatter) Format(lists []model.List, tasks []model.Task) (map[strin
 	// Tasks CSV
 	taskBuf := &strings.Builder{}
 	taskWriter := csv.NewWriter(taskBuf)
-	taskWriter.Write([]string{"Title", "Description", "ListName", "Priority", "Deadline", "Status", "CreatedAt", "UpdatedAt"})
+	taskWriter.Write([]string{"Title", "Description", "ListName", "Priority", "Deadline", "Status", "CompletedAt", "CreatedAt", "UpdatedAt"})
 	for _, t := range data.Tasks {
 		desc := ""
 		if t.Description != nil {
@@ -140,6 +148,10 @@ func (f *CSVFormatter) Format(lists []model.List, tasks []model.Task) (map[strin
 		if t.Deadline != nil {
 			deadline = t.Deadline.Format(time.RFC3339)
 		}
+		completedAt := ""
+		if t.CompletedAt != nil {
+			completedAt = t.CompletedAt.Format(time.RFC3339)
+		}
 		updatedAt := ""
 		if t.UpdatedAt != nil {
 			updatedAt = t.UpdatedAt.Format(time.RFC3339)
@@ -152,6 +164,7 @@ func (f *CSVFormatter) Format(lists []model.List, tasks []model.Task) (map[strin
 			prio,
 			deadline,
 			fmt.Sprintf("%v", t.Status),
+			completedAt,
 			t.CreatedAt.Format(time.RFC3339),
 			updatedAt,
 		})
@@ -201,6 +214,7 @@ func (f *TOMLFormatter) Format(lists []model.List, tasks []model.Task) (map[stri
 		Priority    *string    `toml:"Priority,omitempty"`
 		Deadline    time.Time  `toml:"Deadline,omitempty"`
 		Status      bool       `toml:"Status"`
+		CompletedAt time.Time  `toml:"CompletedAt,omitempty"`
 		CreatedAt   time.Time  `toml:"CreatedAt"`
 		UpdatedAt   time.Time  `toml:"UpdatedAt,omitempty"`
 	}
@@ -229,6 +243,11 @@ func (f *TOMLFormatter) Format(lists []model.List, tasks []model.Task) (map[stri
 			updatedAt = *t.UpdatedAt
 		}
 
+		var completedAt time.Time
+		if t.CompletedAt != nil {
+			completedAt = *t.CompletedAt
+		}
+
 		res.Tasks[i] = tomlExportTask{
 			Title:       t.Title,
 			Description: t.Description,
@@ -236,6 +255,7 @@ func (f *TOMLFormatter) Format(lists []model.List, tasks []model.Task) (map[stri
 			Priority:    t.Priority,
 			Deadline:    deadline,
 			Status:      t.Status,
+			CompletedAt: completedAt,
 			CreatedAt:   t.CreatedAt,
 			UpdatedAt:   updatedAt,
 		}

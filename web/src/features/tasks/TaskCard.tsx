@@ -82,13 +82,13 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
           <h3 className={cn(
             "transition-all duration-300 truncate tracking-tight",
             density === "compact" ? "text-sm" : "text-base",
-            task.status ? "text-muted-foreground line-through font-normal" : "text-foreground font-bold",
+            task.status ? "text-muted-foreground font-normal" : "text-foreground font-bold",
           )}>
             {task.title}
           </h3>
 
-          {/* List Badge - Elegant chip */}
-          {showListBadge && listName && (
+          {/* List Badge - Hide if completed as we show list name below */}
+          {showListBadge && listName && !task.status && (
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/30 border border-muted/5">
               <div className="w-1 h-1 rounded-full" style={{ backgroundColor: listColor }} />
               <span className="text-[10px] font-black text-muted-foreground/50 uppercase tracking-tighter">
@@ -98,7 +98,35 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
           )}
         </div>
 
-        {task.description && (
+        {/* List Name and Completion Info for Done Tasks */}
+        {task.status && (
+          <div className="flex flex-col gap-0.5 mb-1.5">
+            {listName && (
+              <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-wider">
+                {listName}
+              </span>
+            )}
+            {task.completed_at && (
+              <span className="text-[10px] font-medium text-muted-foreground/60">
+                Completed: {(() => {
+                  const date = new Date(task.completed_at);
+                  const now = new Date();
+                  const yesterday = new Date();
+                  yesterday.setDate(now.getDate() - 1);
+                  
+                  const isToday = date.toDateString() === now.toDateString();
+                  const isYesterday = date.toDateString() === yesterday.toDateString();
+                  
+                  if (isToday) return `Today, ${format(date, "h:mm aa")}`;
+                  if (isYesterday) return `Yesterday, ${format(date, "h:mm aa")}`;
+                  return format(date, "MM/dd/yy, h:mm aa");
+                })()}
+              </span>
+            )}
+          </div>
+        )}
+
+        {task.description && !task.status && (
           <p className={cn(
             "text-xs text-muted-foreground/50 line-clamp-2 leading-relaxed transition-all duration-500",
             density === "compact" ? "mt-0" : "mt-1.5",

@@ -50,6 +50,7 @@ func Import(database *sql.DB, format string, data []byte) (*ImportResult, error)
 			Priority    *string    `toml:"Priority,omitempty"`
 			Deadline    time.Time  `toml:"Deadline,omitempty"`
 			Status      bool       `toml:"Status"`
+			CompletedAt time.Time  `toml:"CompletedAt,omitempty"`
 			CreatedAt   time.Time  `toml:"CreatedAt"`
 			UpdatedAt   time.Time  `toml:"UpdatedAt,omitempty"`
 		}
@@ -74,6 +75,11 @@ func Import(database *sql.DB, format string, data []byte) (*ImportResult, error)
 				u := tt.UpdatedAt
 				updatedAt = &u
 			}
+			var completedAt *time.Time
+			if !tt.CompletedAt.IsZero() {
+				c := tt.CompletedAt
+				completedAt = &c
+			}
 			exportData.Tasks = append(exportData.Tasks, ExportTask{
 				Title:       tt.Title,
 				Description: tt.Description,
@@ -81,6 +87,7 @@ func Import(database *sql.DB, format string, data []byte) (*ImportResult, error)
 				Priority:    tt.Priority,
 				Deadline:    deadline,
 				Status:      tt.Status,
+				CompletedAt: completedAt,
 				CreatedAt:   tt.CreatedAt,
 				UpdatedAt:   updatedAt,
 			})
@@ -171,9 +178,9 @@ func parseCSVBuffers(tasksData, listsData []byte) (ExportData, error) {
 			return res, fmt.Errorf("failed to read tasks CSV: %w", err)
 		}
 		if len(records) > 0 {
-			// Skip header: Title, Description, ListName, Priority, Deadline, Status, CreatedAt, UpdatedAt
+			// Skip header: Title, Description, ListName, Priority, Deadline, Status, CompletedAt, CreatedAt, UpdatedAt
 			for _, rec := range records[1:] {
-				if len(rec) < 8 {
+				if len(rec) < 9 {
 					continue
 				}
 				title := rec[0]
@@ -182,8 +189,9 @@ func parseCSVBuffers(tasksData, listsData []byte) (ExportData, error) {
 				prio := rec[3]
 				deadlineStr := rec[4]
 				statusStr := rec[5]
-				createdAtStr := rec[6]
-				updatedAtStr := rec[7]
+				completedAtStr := rec[6]
+				createdAtStr := rec[7]
+				updatedAtStr := rec[8]
 
 				var description *string
 				if desc != "" {
@@ -199,6 +207,11 @@ func parseCSVBuffers(tasksData, listsData []byte) (ExportData, error) {
 					deadline = &t
 				}
 				status := statusStr == "true"
+				var completedAt *time.Time
+				if completedAtStr != "" {
+					t, _ := time.Parse(time.RFC3339, completedAtStr)
+					completedAt = &t
+				}
 				createdAt, _ := time.Parse(time.RFC3339, createdAtStr)
 				var updatedAt *time.Time
 				if updatedAtStr != "" {
@@ -213,6 +226,7 @@ func parseCSVBuffers(tasksData, listsData []byte) (ExportData, error) {
 					Priority:    priority,
 					Deadline:    deadline,
 					Status:      status,
+					CompletedAt: completedAt,
 					CreatedAt:   createdAt,
 					UpdatedAt:   updatedAt,
 				})
@@ -314,10 +328,16 @@ func executeImport(database *sql.DB, data ExportData) (*ImportResult, error) {
 			updatedAt = *t.UpdatedAt
 		}
 
+		var completedAt *time.Time
+		if t.CompletedAt != nil {
+			ct := t.CompletedAt.UTC()
+			completedAt = &ct
+		}
+
 		newID := uuid.New().String()
-		_, err = tx.Exec(`INSERT INTO tasks (id, list_id, title, description, priority, deadline, status, created_at, updated_at) 
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			newID, listID, t.Title, t.Description, t.Priority, t.Deadline, t.Status, t.CreatedAt.UTC(), updatedAt.UTC())
+		_, err = tx.Exec(`INSERT INTO tasks (id, list_id, title, description, priority, deadline, status, completed_at, created_at, updated_at) 
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			newID, listID, t.Title, t.Description, t.Priority, t.Deadline, t.Status, completedAt, t.CreatedAt.UTC(), updatedAt.UTC())
 		if err != nil {
 			return nil, fmt.Errorf("failed to import task %s: %w", t.Title, err)
 		}
