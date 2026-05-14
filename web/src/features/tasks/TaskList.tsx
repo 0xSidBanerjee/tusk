@@ -9,6 +9,7 @@ import { TaskForm } from "./TaskForm";
 import { QuickAddTask } from "./QuickAddTask";
 import { Sidebar } from "./Sidebar";
 import { DataManagement } from "./DataManagement";
+import { TaskDetailPanel } from "./TaskDetailPanel";
 import { useActiveList } from "../../hooks/useActiveList";
 import { cn } from "@/lib/utils";
 import { Plus, ChevronLeft, ChevronRight, Loader2, LayoutList, Database, Edit2, Layout, List as ListIcon, Maximize2, CheckCircle2, Inbox } from "lucide-react";
@@ -397,61 +398,25 @@ export function TaskList() {
         )}
       </main>
 
-      {/* Form Dialog */}
-      {/* Note: I'm using a simple overlay if Dialog component from shadcn is not available or if I want full control */}
-      {/* But for now let's assume I want to use the Dialog from shadcn if it exists, otherwise a custom one */}
-      <AnimatePresence>
-        {(isFormOpen || !!editingTask) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                setIsFormOpen(false);
-                setEditingTask(null);
-              }}
-              className="absolute inset-0 bg-background/80 backdrop-blur-xl"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-xl bg-card rounded-3xl shadow-2xl border border-muted p-8 overflow-hidden"
-            >
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  {editingTask ? (
-                    <Edit2 className="w-5 h-5 text-primary" />
-                  ) : (
-                    <Plus className="w-5 h-5 text-primary" />
-                  )}
-                </div>
-                <h2 className="text-2xl font-black tracking-tight">
-                  {editingTask ? "Edit Task" : "New Task"}
-                </h2>
-              </div>
-              <TaskForm
-                initialData={editingTask || undefined}
-                onSubmit={(task) => {
-                  if (editingTask) {
-                    updateMutation.mutate({ id: editingTask.id, task });
-                  } else {
-                    createMutation.mutate({
-                      ...task,
-                      list_id: activeListId === "all" ? "default" : activeListId
-                    });
-                  }
-                }}
-                onCancel={() => {
-                  setIsFormOpen(false);
-                  setEditingTask(null);
-                }}
-              />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <TaskDetailPanel
+        isOpen={isFormOpen || !!editingTask}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditingTask(null);
+        }}
+        task={editingTask}
+        title={editingTask ? "Task Details" : "New Task"}
+        onSubmit={(task) => {
+          if (editingTask) {
+            updateMutation.mutate({ id: editingTask.id, task });
+          } else {
+            createMutation.mutate({
+              ...task,
+              list_id: activeListId === "all" ? "default" : activeListId
+            });
+          }
+        }}
+      />
 
       <DataManagement 
         isOpen={isDataModalOpen} 

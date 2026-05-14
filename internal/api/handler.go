@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -153,6 +154,9 @@ type UpdateTaskRequest struct {
 
 func (h *Handler) UpdateTask(c *gin.Context) {
 	id := c.Param("id")
+	body, _ := io.ReadAll(c.Request.Body)
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+
 	var req UpdateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -205,6 +209,12 @@ func (h *Handler) UpdateTask(c *gin.Context) {
 	}
 	if req.Deadline != nil {
 		task.Deadline = req.Deadline
+	} else {
+		var raw map[string]interface{}
+		_ = json.Unmarshal(body, &raw)
+		if _, ok := raw["deadline"]; ok {
+			task.Deadline = nil
+		}
 	}
 	if req.Status != nil {
 		task.Status = *req.Status

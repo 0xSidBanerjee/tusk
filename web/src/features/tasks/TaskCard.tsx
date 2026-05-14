@@ -1,6 +1,6 @@
 import { Task } from "../../types/task";
 import { cn } from "../../lib/utils";
-import { Calendar, Trash2, Edit2, Check, Flag } from "lucide-react";
+import { Calendar, Trash2, Info, Check, Flag } from "lucide-react";
 import { format, isTomorrow, isToday, isYesterday } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -43,8 +43,9 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      onClick={() => onEdit(task)}
       className={cn(
-        "group relative flex items-start rounded-3xl transition-all duration-300 bg-card border border-transparent hover:border-border hover:shadow-xl hover:shadow-black/5",
+        "group relative flex items-start rounded-3xl transition-all duration-300 bg-card border border-transparent hover:border-border hover:shadow-xl hover:shadow-black/5 cursor-pointer",
         density === "compact" ? "p-3 pl-12 gap-4" : "p-6 pl-14 gap-6",
         task.status && "opacity-60"
       )}
@@ -53,7 +54,10 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
       <div className="flex-shrink-0 mt-1">
         <motion.button
           whileTap={{ scale: 0.85 }}
-          onClick={() => onToggleStatus(task)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleStatus(task);
+          }}
           className={cn(
             "w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all duration-300 relative overflow-hidden",
             task.status 
@@ -145,15 +149,21 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
           size="icon"
           variant="ghost"
           className="h-9 w-9 rounded-full hover:bg-muted transition-all"
-          onClick={() => onEdit(task)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(task);
+          }}
         >
-          <Edit2 className="w-4 h-4 text-muted-foreground/40" />
+          <Info className="w-4 h-4 text-muted-foreground/40" />
         </Button>
         <Button
           size="icon"
           variant="ghost"
           className="h-9 w-9 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all"
-          onClick={() => onDelete(task.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(task.id);
+          }}
         >
           <Trash2 className="w-4 h-4 text-muted-foreground/40" />
         </Button>
