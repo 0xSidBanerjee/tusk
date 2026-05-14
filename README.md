@@ -56,6 +56,9 @@ make build
 
 ## CLI Reference
 
+### Global Flags
+- `-d, --db-file`: Path to the SQLite database. Defaults to platform-standard locations (XDG on Linux, Application Support on macOS, AppData on Windows).
+
 ### `tui`
 Interactive terminal interface.
 - `j/k`: Navigate tasks/lists

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/0xSidBanerjee/tusk/internal/util"
 )
 
 var (
@@ -41,5 +42,5 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&dbFile, "db-file", "d", "todo.db", "Path to the SQLite database file")
+	rootCmd.PersistentFlags().StringVarP(&dbFile, "db-file", "d", util.GetDefaultDBPath(), "Path to the SQLite database file")
 }
