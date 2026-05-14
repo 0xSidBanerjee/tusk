@@ -15,10 +15,19 @@ var (
 	ErrDuplicateListName = errors.New("a list with this name already exists")
 )
 
+type DeadlineFilter string
+
+const (
+	DeadlineToday    DeadlineFilter = "today"
+	DeadlineOverdue  DeadlineFilter = "overdue"
+	DeadlineThisWeek DeadlineFilter = "this-week"
+)
+
 type GetAllFilters struct {
 	ListID   string
 	Priority *model.Priority
 	Status   *bool
+	Deadline *DeadlineFilter
 	Page     int
 	PageSize int
 }
@@ -93,6 +102,32 @@ func (s *SQLiteStore) GetAllTasks(filters GetAllFilters) ([]model.Task, int, err
 	if filters.Status != nil {
 		whereClauses = append(whereClauses, "status = ?")
 		args = append(args, *filters.Status)
+	}
+
+	if filters.Deadline != nil {
+		now := time.Now()
+		switch *filters.Deadline {
+		case DeadlineToday:
+			startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
+			whereClauses = append(whereClauses, "deadline >= ? AND deadline <= ?")
+			args = append(args, startOfDay, endOfDay)
+		case DeadlineOverdue:
+			whereClauses = append(whereClauses, "deadline < ? AND status = 0")
+			args = append(args, now)
+		case DeadlineThisWeek:
+			// Calculate end of current week (Sunday)
+			daysUntilSunday := int(time.Sunday - now.Weekday())
+			if daysUntilSunday < 0 {
+				daysUntilSunday += 7
+			}
+			endOfWeek := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location()).AddDate(0, 0, daysUntilSunday)
+			// For "this week", we typically want everything from start of week (or today) to Sunday
+			// Let's go with start of today to end of Sunday
+			startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			whereClauses = append(whereClauses, "deadline >= ? AND deadline <= ?")
+			args = append(args, startOfToday, endOfWeek)
+		}
 	}
 
 	where := ""
