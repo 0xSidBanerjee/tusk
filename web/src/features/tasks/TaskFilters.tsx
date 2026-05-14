@@ -21,75 +21,75 @@ export function TaskFilters({
   const isFiltered = priority !== undefined;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 py-4 mb-4">
-      <div className="flex items-center gap-3">
-        <motion.button
-          whileTap={{ scale: 0.95 }}
+    <div className="flex flex-wrap items-center gap-4 py-1">
+      <div className="flex items-center p-1 bg-muted/50 rounded-[1.25rem] border border-muted/10 backdrop-blur-md">
+        <button
           onClick={() => onPriorityChange(undefined)}
           className={cn(
-            "flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 border shadow-sm",
-            priority === undefined
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-card hover:bg-muted border-border text-muted-foreground"
+            "relative flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[13px] font-bold transition-all duration-300 outline-none",
+            priority === undefined ? "text-foreground" : "text-muted-foreground/50 hover:text-foreground"
           )}
         >
-          <Filter className="w-4 h-4" />
-          All
-        </motion.button>
+          {priority === undefined && (
+            <motion.div
+              layoutId="active-filter"
+              className="absolute inset-0 bg-background rounded-[0.9rem] shadow-[0_2px_12px_-3px_rgba(0,0,0,0.15),0_8px_30px_-5px_rgba(0,0,0,0.1)] border border-muted/20 dark:bg-muted dark:border-muted-foreground/10"
+              transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <Filter className={cn("w-3.5 h-3.5", priority === undefined ? "text-primary" : "text-muted-foreground/30")} />
+            All
+          </span>
+        </button>
 
         {(["High", "Medium", "Low"] as Priority[]).map((p) => {
           const isActive = priority === p;
           const config = {
             High: { iconColor: "text-red-500", label: "High" },
             Medium: { iconColor: "text-orange-500", label: "Medium" },
-            Low: { iconColor: "text-muted-foreground", label: "Low" },
+            Low: { iconColor: "text-blue-500", label: "Low" },
           }[p];
 
           return (
-            <motion.button
+            <button
               key={p}
-              whileTap={{ scale: 0.95 }}
               onClick={() => onPriorityChange(isActive ? undefined : p)}
               className={cn(
-                "flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 border shadow-sm",
-                isActive
-                  ? "bg-card border-primary/20 ring-1 ring-primary/10 shadow-md text-foreground"
-                  : "bg-card border-border text-muted-foreground hover:bg-muted"
+                "relative flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[13px] font-bold transition-all duration-300 outline-none",
+                isActive ? "text-foreground" : "text-muted-foreground/50 hover:text-foreground"
               )}
             >
-              <Flag className={cn("w-4 h-4", config.iconColor)} />
-              <span className={isActive ? "font-semibold" : ""}>
+              {isActive && (
+                <motion.div
+                  layoutId="active-filter"
+                  className="absolute inset-0 bg-background rounded-[0.9rem] shadow-[0_2px_12px_-3px_rgba(0,0,0,0.15),0_8px_30px_-5px_rgba(0,0,0,0.1)] border border-muted/20 dark:bg-muted dark:border-muted-foreground/10"
+                  transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <Flag className={cn("w-3.5 h-3.5", isActive ? config.iconColor : "text-muted-foreground/30")} />
                 {config.label}
               </span>
-            </motion.button>
+            </button>
           );
         })}
       </div>
 
-      <div className="flex items-center gap-2 ml-auto">
-        {isFiltered && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onReset}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-destructive hover:bg-destructive/10 transition-all border border-destructive/20"
-          >
-            <X className="w-3 h-3" />
-            Clear
-          </motion.button>
-        )}
+      <div className="flex items-center gap-3 ml-auto">
+
+        <div className="h-4 w-px bg-muted/20 mx-1" />
 
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={onDensityToggle}
-          className="flex items-center justify-center h-10 w-10 rounded-xl bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-all shadow-sm"
+          className="flex items-center justify-center h-10 w-10 rounded-2xl bg-muted/30 border border-muted/10 text-muted-foreground/60 hover:bg-background hover:text-foreground hover:shadow-sm transition-all"
           title={density === "comfortable" ? "Switch to Compact" : "Switch to Comfortable"}
         >
           {density === "comfortable" ? (
-            <Layout className="w-4 h-4" />
+            <Layout className="w-3.5 h-3.5" />
           ) : (
-            <ListIcon className="w-4 h-4" />
+            <ListIcon className="w-3.5 h-3.5" />
           )}
         </motion.button>
       </div>

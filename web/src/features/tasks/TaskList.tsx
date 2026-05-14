@@ -180,6 +180,9 @@ export function TaskList() {
 
   const groupTasksByDate = (tasks: Task[]) => {
     const groups: { [key: string]: Task[] } = {};
+    const staticOrder = ["Today", "Yesterday", "Previous 7 Days", "Previous 30 Days"];
+    const dynamicOrder: string[] = [];
+
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
@@ -196,21 +199,29 @@ export function TaskList() {
       let group = "Earlier";
       if (task.completed_at) {
         const date = new Date(task.completed_at);
-        date.setHours(0, 0, 0, 0);
+        const taskDay = new Date(date);
+        taskDay.setHours(0, 0, 0, 0);
 
-        if (date.getTime() === now.getTime()) group = "Today";
-        else if (date.getTime() === yesterday.getTime()) group = "Yesterday";
-        else if (date.getTime() >= sevenDaysAgo.getTime()) group = "Previous 7 Days";
-        else if (date.getTime() >= thirtyDaysAgo.getTime()) group = "Previous 30 Days";
+        if (taskDay.getTime() === now.getTime()) group = "Today";
+        else if (taskDay.getTime() === yesterday.getTime()) group = "Yesterday";
+        else if (taskDay.getTime() >= sevenDaysAgo.getTime()) group = "Previous 7 Days";
+        else if (taskDay.getTime() >= thirtyDaysAgo.getTime()) group = "Previous 30 Days";
+        else {
+          group = format(date, "MMMM");
+        }
       }
 
-      if (!groups[group]) groups[group] = [];
+      if (!groups[group]) {
+        groups[group] = [];
+        if (!staticOrder.includes(group) && group !== "Earlier") {
+          dynamicOrder.push(group);
+        }
+      }
       groups[group].push(task);
     });
 
-    // Order keys
-    const order = ["Today", "Yesterday", "Previous 7 Days", "Previous 30 Days", "Earlier"];
-    return order.filter(key => groups[key]).map(key => ({ title: key, tasks: groups[key] }));
+    const finalOrder = [...staticOrder, ...dynamicOrder, "Earlier"];
+    return finalOrder.filter(key => groups[key]).map(key => ({ title: key, tasks: groups[key] }));
   };
 
   const groupedTasks = activeListId === "completed" ? groupTasksByDate(tasks) : null;
@@ -221,7 +232,7 @@ export function TaskList() {
       
       <main className="flex-1 flex flex-col min-w-0 relative bg-card overflow-hidden">
         {/* Sticky Header Section */}
-        <header className="p-8 pb-4 flex flex-col gap-4 shrink-0 bg-card/50 backdrop-blur-sm z-20 border-b border-muted/10">
+        <header className="px-8 py-4 flex flex-col gap-3 shrink-0 bg-card/50 backdrop-blur-sm z-20 border-b border-muted/10">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2.5">
@@ -258,8 +269,9 @@ export function TaskList() {
              </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <QuickAddTask activeListId={activeListId} />
+            <div className="h-px bg-muted-foreground/10 mx-1 my-1" />
             <TaskFilters
               priority={priority}
               onPriorityChange={(p) => {
@@ -277,7 +289,7 @@ export function TaskList() {
         </header>
 
         {/* Scrollable Tasks Area */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 py-6 no-scrollbar">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 py-4 no-scrollbar">
           <div className="w-full">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-50">

@@ -4,7 +4,7 @@ import { getLists, createList, updateList, deleteList } from "../../api/lists";
 import { List } from "../../types/task";
 import { cn } from "@/lib/utils";
 import { Plus, MoreVertical, Trash2, Edit2, Check, X, Inbox, LayoutList, Sun, Moon, CheckCircle2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useTheme } from "../../hooks/useTheme";
 import {
   DropdownMenu,
@@ -113,46 +113,55 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
       </div>
 
       <nav className="flex-1 flex flex-col gap-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar pr-1">
-        <div className="mb-4">
-          <p className="px-3 mb-2 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">General</p>
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveListId("all")}
-            className={cn(
-              "w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-300 group relative",
-              activeListId === "all" 
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
-                : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <LayoutList className={cn("w-4 h-4", activeListId === "all" ? "text-primary-foreground" : "text-primary")} />
-              <span className="text-sm font-bold">All Tasks</span>
-            </div>
-            <span className={cn(
-              "text-[9px] font-black px-2 py-0.5 rounded-full",
-              activeListId === "all" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
-            )}>
-              {totalIncomplete}
-            </span>
-          </motion.button>
+        <LayoutGroup id="sidebar-lists">
+          <div className="mb-4">
+            <p className="px-3 mb-2 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">General</p>
+            <button
+              onClick={() => setActiveListId("all")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-300 group relative",
+                activeListId === "all" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+              )}
+            >
+              {activeListId === "all" && (
+                <motion.div
+                  layoutId="active-list-bg"
+                  className="absolute inset-0 bg-primary rounded-xl shadow-lg shadow-primary/20"
+                  transition={{ type: "spring", bounce: 0.1, duration: 0.5 }}
+                />
+              )}
+              <div className="relative z-10 flex items-center gap-3">
+                <LayoutList className={cn("w-4 h-4", activeListId === "all" ? "text-primary-foreground" : "text-primary")} />
+                <span className="text-sm font-bold">All Tasks</span>
+              </div>
+              <span className={cn(
+                "relative z-10 text-[9px] font-black px-2 py-0.5 rounded-full transition-colors duration-300",
+                activeListId === "all" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}>
+                {totalIncomplete}
+              </span>
+            </button>
 
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveListId("completed")}
-            className={cn(
-              "w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-300 group relative mt-1",
-              activeListId === "completed" 
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
-                : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className={cn("w-4 h-4", activeListId === "completed" ? "text-primary-foreground" : "text-primary")} />
-              <span className="text-sm font-bold">Completed</span>
-            </div>
-          </motion.button>
-        </div>
+            <button
+              onClick={() => setActiveListId("completed")}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-300 group relative mt-1",
+                activeListId === "completed" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+              )}
+            >
+              {activeListId === "completed" && (
+                <motion.div
+                  layoutId="active-list-bg"
+                  className="absolute inset-0 bg-primary rounded-xl shadow-lg shadow-primary/20"
+                  transition={{ type: "spring", bounce: 0.1, duration: 0.5 }}
+                />
+              )}
+              <div className="relative z-10 flex items-center gap-3">
+                <CheckCircle2 className={cn("w-4 h-4", activeListId === "completed" ? "text-primary-foreground" : "text-primary")} />
+                <span className="text-sm font-bold">Completed</span>
+              </div>
+            </button>
+          </div>
 
         <div>
           <p className="px-3 mb-2 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">My Lists</p>
@@ -215,15 +224,19 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
                     animate={{ opacity: 1, x: 0 }}
                     className={cn(
                       "group relative flex items-center justify-between rounded-xl transition-all duration-300 pr-2",
-                      isActive 
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
-                        : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                      isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                     )}
                   >
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-list-bg"
+                        className="absolute inset-0 bg-primary rounded-xl shadow-lg shadow-primary/20"
+                        transition={{ type: "spring", bounce: 0.1, duration: 0.5 }}
+                      />
+                    )}
+                    <button
                       onClick={() => setActiveListId(list.id)}
-                      className="flex-1 flex items-center gap-3 px-3 py-2 text-left"
+                      className="relative z-10 flex-1 flex items-center gap-3 px-3 py-2 text-left"
                     >
                       {isDefault ? (
                         <Inbox className={cn("w-4 h-4", isActive ? "text-primary-foreground" : "text-primary")} />
@@ -234,9 +247,9 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
                         )} style={{ backgroundColor: isActive ? undefined : list.color }} />
                       )}
                       <span className="text-sm font-bold truncate">{list.name}</span>
-                    </motion.button>
+                    </button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="relative z-10 flex items-center gap-2">
                       {list.incomplete_count > 0 && (
                         <span className={cn(
                           "text-[9px] font-black px-1.5 py-0.5 rounded-full transition-opacity duration-300",
@@ -298,7 +311,8 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
             </AnimatePresence>
           </div>
         </div>
-      </nav>
+      </LayoutGroup>
+    </nav>
 
       <div className="pt-4 border-t border-muted-foreground/10">
         <AnimatePresence mode="wait">

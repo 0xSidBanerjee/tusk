@@ -1,7 +1,7 @@
 import { Task } from "../../types/task";
 import { cn } from "../../lib/utils";
 import { Calendar, Trash2, Edit2, Check, Flag } from "lucide-react";
-import { format, isTomorrow, isToday } from "date-fns";
+import { format, isTomorrow, isToday, isYesterday } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +24,17 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
     if (isToday(date)) return "Today";
     if (isTomorrow(date)) return "Tomorrow";
     return format(date, "MMM d, yyyy");
+  };
+
+  const getCompletedText = (completedAt: string) => {
+    const date = new Date(completedAt);
+    let datePart = "";
+    if (isToday(date)) datePart = "Today";
+    else if (isYesterday(date)) datePart = "Yesterday";
+    else datePart = format(date, "dd/MM/yyyy");
+    
+    const timePart = format(date, "p");
+    return `${datePart}, ${timePart}`;
   };
 
   return (
@@ -89,13 +100,23 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
           )}
 
           {/* Deadline Badge */}
-          <div className={cn(
-            "flex items-center gap-1.5 text-xs font-medium",
-            isOverdue ? "text-red-500" : "text-muted-foreground"
-          )}>
-            <Calendar className="w-3.5 h-3.5 opacity-50" />
-            <span>{task.deadline ? getDeadlineText(task.deadline) : "No due date"}</span>
-          </div>
+          {!task.status && (
+            <div className={cn(
+              "flex items-center gap-1.5 text-xs font-medium",
+              isOverdue ? "text-red-500" : "text-muted-foreground"
+            )}>
+              <Calendar className="w-3.5 h-3.5 opacity-50" />
+              <span>{task.deadline ? getDeadlineText(task.deadline) : "No due date"}</span>
+            </div>
+          )}
+
+          {/* Completion Badge */}
+          {task.status && task.completed_at && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/60">
+              <Check className="w-3.5 h-3.5 text-primary" />
+              <span>Completed: {getCompletedText(task.completed_at)}</span>
+            </div>
+          )}
 
           {/* Priority Pill */}
           {task.priority && (

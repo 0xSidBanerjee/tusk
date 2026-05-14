@@ -18,8 +18,22 @@ const parsePriority = (p: string): Priority => {
   }
 };
 
-const parseDeadline = (d: string): string | undefined => {
+export const parseDeadline = (d: string): string | undefined => {
   if (!d) return undefined;
+
+  // Handle dd-mm-yyyy and dd-mm-yy
+  const dmMatch = d.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+  if (dmMatch) {
+    let [_, day, month, year] = dmMatch;
+    if (year.length === 2) {
+      year = "20" + year; // Assume 20xx
+    }
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+
   // Try to parse as ISO date first to avoid chrono misinterpretation if any
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     return new Date(d).toISOString();
