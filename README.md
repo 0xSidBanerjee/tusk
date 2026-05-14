@@ -2,6 +2,16 @@
 
 A single-binary task manager with a Web interface, TUI, and CLI.
 
+## Quick Start
+
+No install required:
+
+```bash
+docker run -p 8080:8080 -v tusk-data:/home/nonroot/.local/share/tusk ghcr.io/0xsidbaner/tusk
+```
+
+Then open http://localhost:8080.
+
 ## Features
 
 - **Single Binary**: Backend, frontend, and database (SQLite) are embedded into one executable.
