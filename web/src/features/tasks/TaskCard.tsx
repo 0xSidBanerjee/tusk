@@ -44,7 +44,7 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={cn(
-        "group relative flex items-start rounded-3xl transition-all duration-500 bg-card border border-transparent hover:border-border hover:shadow-xl hover:shadow-black/5",
+        "group relative flex items-start rounded-3xl transition-all duration-300 bg-card border border-transparent hover:border-border hover:shadow-xl hover:shadow-black/5",
         density === "compact" ? "p-3 pl-12 gap-4" : "p-6 pl-14 gap-6",
         task.status && "opacity-60"
       )}
@@ -55,7 +55,7 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
           whileTap={{ scale: 0.85 }}
           onClick={() => onToggleStatus(task)}
           className={cn(
-            "w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all duration-500 relative overflow-hidden",
+            "w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all duration-300 relative overflow-hidden",
             task.status 
               ? "bg-primary border-primary shadow-lg shadow-primary/20" 
               : "border-muted-foreground/20 bg-background hover:border-primary/40 hover:scale-110 shadow-sm"
@@ -100,13 +100,13 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
           )}
 
           {/* Deadline Badge */}
-          {!task.status && (
+          {!task.status && task.deadline && (
             <div className={cn(
               "flex items-center gap-1.5 text-xs font-medium",
               isOverdue ? "text-red-500" : "text-muted-foreground"
             )}>
               <Calendar className="w-3.5 h-3.5 opacity-50" />
-              <span>{task.deadline ? getDeadlineText(task.deadline) : "No due date"}</span>
+              <span>{getDeadlineText(task.deadline)}</span>
             </div>
           )}
 
@@ -140,7 +140,7 @@ export function TaskCard({ task, density = "comfortable", showListBadge, listNam
       </div>
 
       {/* Action Buttons - Subtle until hover */}
-      <div className="flex flex-row gap-1 opacity-0 group-hover:opacity-100 transition-all duration-500 ml-auto pl-4 items-center">
+      <div className="flex flex-row gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 ml-auto pl-4 items-center">
         <Button
           size="icon"
           variant="ghost"

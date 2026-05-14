@@ -13,7 +13,7 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="h-screen bg-background text-foreground transition-colors duration-300 selection:bg-primary selection:text-primary-foreground overflow-hidden">
+      <div className="h-screen bg-background text-foreground transition-all duration-300 selection:bg-primary selection:text-primary-foreground overflow-hidden">
         <TaskList />
       </div>
     </QueryClientProvider>

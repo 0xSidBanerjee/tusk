@@ -11,7 +11,7 @@ import { Sidebar } from "./Sidebar";
 import { DataManagement } from "./DataManagement";
 import { useActiveList } from "../../hooks/useActiveList";
 import { cn } from "@/lib/utils";
-import { Plus, ChevronLeft, ChevronRight, Loader2, LayoutList, Database, Edit2, Layout, List as ListIcon, Maximize2 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Loader2, LayoutList, Database, Edit2, Layout, List as ListIcon, Maximize2, CheckCircle2, Inbox } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
@@ -236,8 +236,12 @@ export function TaskList() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2.5">
-                {!activeListId || activeListId === "all" ? (
+                {(!activeListId || activeListId === "all") ? (
                   <LayoutList className="w-6 h-6 text-primary" />
+                ) : activeListId === "completed" ? (
+                  <CheckCircle2 className="w-6 h-6 text-primary" />
+                ) : activeListId === "default" ? (
+                  <Inbox className="w-6 h-6 text-primary" />
                 ) : (
                   <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: activeList.color }} />
                 )}
@@ -253,7 +257,7 @@ export function TaskList() {
                  variant="outline"
                  size="sm"
                  onClick={() => setIsDataModalOpen(true)}
-                 className="h-9 rounded-lg border-muted bg-card hover:bg-muted transition-all font-bold gap-2 shadow-sm"
+                  className="h-9 rounded-lg border-muted bg-card hover:bg-muted transition-all duration-300 font-bold gap-2 shadow-sm"
                >
                  <Database className="w-3.5 h-3.5 text-primary" />
                  <span className="hidden sm:inline text-xs">Import / Export</span>
@@ -261,7 +265,7 @@ export function TaskList() {
                <Button
                  size="sm"
                  onClick={() => setIsFormOpen(true)}
-                 className="h-9 rounded-lg bg-primary text-primary-foreground hover:scale-105 transition-all font-black px-4 shadow-lg shadow-primary/10 active:scale-95 gap-2"
+                  className="h-9 rounded-lg bg-primary text-primary-foreground hover:scale-105 transition-all duration-300 font-black px-4 shadow-lg shadow-primary/10 active:scale-95 gap-2"
                >
                  <Plus className="w-4 h-4 stroke-[3]" />
                  <span className="text-xs">Add Task</span>
@@ -369,7 +373,7 @@ export function TaskList() {
               size="icon"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="rounded-full h-8 w-8 hover:bg-muted transition-all"
+              className="rounded-full h-8 w-8 hover:bg-muted transition-all duration-300"
             >
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </Button>
@@ -385,7 +389,7 @@ export function TaskList() {
               size="icon"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="rounded-full h-8 w-8 hover:bg-muted transition-all"
+              className="rounded-full h-8 w-8 hover:bg-muted transition-all duration-300"
             >
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </Button>

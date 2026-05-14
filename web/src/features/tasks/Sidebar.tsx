@@ -91,7 +91,7 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
     <div className="w-[280px] h-screen flex flex-col bg-background border-r py-6 px-4 gap-6 backdrop-blur-md shrink-0">
       <div className="flex items-center justify-between px-3">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20 transition-transform">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20 transition-transform duration-300">
             <Check className="w-5 h-5 text-primary-foreground stroke-[3]" />
           </div>
           <div>
@@ -101,7 +101,7 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
         
         <button
           onClick={toggleTheme}
-          className="p-1.5 rounded-xl border bg-card hover:bg-muted transition-all shadow-sm"
+          className="p-1.5 rounded-xl border bg-card hover:bg-muted transition-all duration-300 shadow-sm"
           aria-label="Toggle theme"
         >
           {theme === "light" ? (
@@ -279,7 +279,7 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
                           ) : (
                             <DropdownMenu onOpenChange={(open) => setOpenMenuId(open ? list.id : null)}>
                               <DropdownMenuTrigger asChild>
-                                <button className="p-1 rounded-lg hover:bg-muted-foreground/10 transition-colors">
+                                <button className="p-1 rounded-lg hover:bg-muted-foreground/10 transition-colors duration-300">
                                   <MoreVertical className="w-3.5 h-3.5" />
                                 </button>
                               </DropdownMenuTrigger>
@@ -350,7 +350,7 @@ export function Sidebar({ activeListId, setActiveListId }: SidebarProps) {
                 setIsAdding(true);
                 setError(null);
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-muted-foreground hover:bg-primary/5 hover:text-primary transition-all border border-dashed border-muted-foreground/20 hover:border-primary/30"
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-muted-foreground hover:bg-primary/5 hover:text-primary transition-all duration-300 border border-dashed border-muted-foreground/20 hover:border-primary/30"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New List</span>

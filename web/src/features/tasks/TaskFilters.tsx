@@ -83,7 +83,7 @@ export function TaskFilters({
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={onDensityToggle}
-          className="flex items-center justify-center h-10 w-10 rounded-2xl bg-muted/30 border border-muted/10 text-muted-foreground/60 hover:bg-background hover:text-foreground hover:shadow-sm transition-all"
+          className="flex items-center justify-center h-10 w-10 rounded-2xl bg-muted/30 border border-muted/10 text-muted-foreground/60 hover:bg-background hover:text-foreground hover:shadow-sm transition-all duration-300"
           title={density === "comfortable" ? "Switch to Compact" : "Switch to Comfortable"}
         >
           {density === "comfortable" ? (

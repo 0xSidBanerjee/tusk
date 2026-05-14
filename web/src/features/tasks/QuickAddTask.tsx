@@ -141,7 +141,7 @@ export function QuickAddTask({ activeListId }: { activeListId: string }) {
       className="w-full space-y-2"
     >
       <div className={cn(
-        "relative group transition-all duration-700 ease-out",
+        "relative group transition-all duration-300 ease-out",
         value ? "scale-[1.005]" : "scale-100"
       )}>
         <div className="relative flex items-center">
@@ -162,7 +162,7 @@ export function QuickAddTask({ activeListId }: { activeListId: string }) {
             onBlur={() => setIsFocused(false)}
             placeholder={isFocused || value ? "Quick add: Task name | Priority (low/med/high) | Deadline (tomorrow, today, DD-MM-YYYY)" : "Press / to quickly add task"}
             className={cn(
-              "pl-12 pr-12 h-12 text-sm font-medium rounded-2xl transition-all border-muted-foreground/10 bg-muted/20",
+              "pl-12 pr-12 h-12 text-sm font-medium rounded-2xl transition-all duration-300 border-muted-foreground/10 bg-muted/20",
               "focus-visible:ring-0 focus-visible:border-primary/20 focus-visible:bg-card shadow-sm",
               error && "border-red-500/50"
             )}
