@@ -7,7 +7,7 @@ A single-binary task manager with a Web interface, TUI, and CLI.
 No install required:
 
 ```bash
-docker run -p 8080:8080 -v tusk-data:/home/nonroot/.local/share/tusk ghcr.io/0xsidbaner/tusk
+docker run -p 8080:8080 -v tusk-data:/home/nonroot/.local/share/tusk ghcr.io/0xsidbanerjee/tusk
 ```
 
 Then open http://localhost:8080.
