@@ -1,125 +1,171 @@
 # Tusk
 
-A single-binary task manager with a Web interface, TUI, and CLI.
+> A single-binary todo manager. Web UI, TUI, and CLI. No account. No cloud. Your data is a file.
+
+Tusk is for people who don't want their task list to require a subscription, an internet connection, or a privacy policy. One binary. SQLite on disk. Three interfaces — use whichever fits the moment.
+
+![License](https://img.shields.io/github/license/0xSidBanerjee/tusk)
+![Release](https://img.shields.io/github/v/release/0xSidBanerjee/tusk)
+![CI](https://img.shields.io/github/actions/workflow/status/0xSidBanerjee/tusk/ci.yml?label=ci)
+![Go Version](https://img.shields.io/github/go-mod/go-version/0xSidBanerjee/tusk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/0xSidBanerjee/tusk)](https://goreportcard.com/report/github.com/0xSidBanerjee/tusk)
+
+---
+
+## 📑 Table of Contents
+- [Why Tusk?](#why-tusk)
+- [Quick Start](#quick-start)
+- [Interfaces](#interfaces)
+  - [Web UI](#web-ui)
+  - [TUI](#tui)
+  - [CLI](#cli)
+- [Data Storage](#data-storage)
+- [Architecture](#architecture)
+- [Development](#development)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Why Tusk?
+
+Most todo apps require an account. Many phone home. Some charge monthly. Tusk does none of that.
+
+- 📦 **One binary** — backend, frontend, and SQLite all baked in. Copy it anywhere and run it.
+- 💻 **Three interfaces** — Web UI for comfort, TUI for terminal-native flow, CLI for scripting and automation.
+- 🔒 **Your data** — stored in a single SQLite file on your disk. Export it, back it up, put it in Git. You own it.
+- 🕶️ **Privacy first** — No account, no cloud, no telemetry.
+
+---
 
 ## Quick Start
 
-No install required:
-
+### Docker (Recommended)
 ```bash
 docker run -p 8080:8080 -v tusk-data:/home/nonroot/.local/share/tusk ghcr.io/0xsidbanerjee/tusk
 ```
+Open [http://localhost:8080](http://localhost:8080).
 
-Then open http://localhost:8080.
-
-## Features
-
-- **Single Binary**: Backend, frontend, and database (SQLite) are embedded into one executable.
-- **TUI**: Interactive terminal interface with live list navigation.
-- **Web UI**: Responsive web application with light/dark theme support.
-- **CLI**: Commands for importing/exporting tasks (JSON, CSV, YAML, TOML).
-- **Organization**: Support for custom lists and priority levels.
-- **Zero Dependencies**: Runs as a standalone binary on Linux, macOS, and Windows.
-
-## Installation
+### Binary Install
+```bash
+# macOS / Linux
+curl -sSL https://github.com/0xSidBanerjee/tusk/releases/latest/download/tusk_$(uname -s)_$(uname -m).tar.gz | tar xz
+./tusk serve
+```
 
 ### From Source
 ```bash
 git clone https://github.com/0xSidBanerjee/tusk.git
 cd tusk
 make build
-./tusk --help
+./tusk serve
 ```
 
-## Usage
+---
 
-### Terminal UI (TUI)
+## Interfaces
+
+### Web UI
+Full task management with lists, priorities, deadlines, filters, import/export, and light/dark theme.
+```bash
+./tusk serve
+# Default: http://localhost:8080
+```
+
+### TUI
+Keyboard-first terminal interface using Vim keybindings.
 ```bash
 ./tusk tui
 ```
 
-### Web Interface
-```bash
-./tusk serve -p 8080
-```
+| Key | Action |
+|-----|--------|
+| `j/k` | Navigate |
+| `n` | New task |
+| `e` | Edit task |
+| `d` | Delete task |
+| `x` | Toggle done |
+| `Tab` | Switch panel |
+| `?` | Help |
 
-### Data Portability
+### CLI
+Perfect for scripting and automation.
 ```bash
-# Export
-./tusk export --format json --export-path backup.json
-
-# Import
-./tusk import --format csv --input-file tasks.csv
-```
-
-### Quick Add & List
-```bash
-# Add a task with quick-add syntax
+# Add a task
 ./tusk add "Fix login bug | high | tomorrow"
 
-# List pending tasks
-./tusk list
+# List tasks
+./tusk list --priority high --deadline today
 
-# List completed tasks
-./tusk list --status completed
+# Export/Import
+./tusk export --format json --export-path ./backup.json
+./tusk import --format yaml --input-file ./backup.yaml
 ```
 
-## CLI Reference
+---
 
-### Global Flags
-- `-d, --db-file`: Path to the SQLite database. Defaults to platform-standard locations (XDG on Linux, Application Support on macOS, AppData on Windows).
+## Data Storage
 
-### `tui`
-Interactive terminal interface.
-- `j/k`: Navigate tasks/lists
-- `enter`: Open/Select
-- `n`: New task
-- `d`: Delete task
-- `x`: Toggle status
-- `?`: Help
+Tasks are stored in a SQLite file. Default location follows platform conventions:
 
-### `add`
-Add a task using quick-add syntax.
-- Syntax: `"Title | Priority | Deadline"`
-- Example: `./tusk add "Buy coffee | high | today"`
+| Platform | Default path |
+|----------|-------------|
+| Linux | `~/.local/share/tusk/tusk.db` |
+| macOS | `~/Library/Application Support/tusk/tusk.db` |
+| Windows | `%APPDATA%\tusk\tusk.db` |
 
-### `list`
-List tasks with filters and sorting.
-- `--priority`: Filter by priority (high, medium, low)
-- `--status`: Filter by status (pending, completed, all)
-- `--deadline`: Filter by deadline (today, overdue, this-week)
-- Example: `./tusk list --priority high --deadline today`
+Override with `--db-file`:
+```bash
+./tusk serve --db-file ~/notes/work.db
+```
 
-### `serve`
-Start the web server and API.
-- `-b, --address`: Bind address (default: `localhost`)
-- `-p, --port`: Listen port (default: `8080`)
-- `-o, --open-browser`: Auto-open browser (default: `true`)
+---
 
-### `export`
-- `-f, --format`: CSV, JSON, YAML, TOML
-- `-l, --export-path`: Output file or directory
+## Architecture
 
-### `import`
-- `-f, --format`: CSV, JSON, YAML, TOML
-- `-i, --input-file`: Input file path
+Tusk is designed for zero-friction deployment and absolute data ownership.
+
+- **Go Backend**: A high-performance, statically typed core.
+- **SQLite Database**: Uses `modernc.org/sqlite` (pure Go, no CGO) for maximum portability across architectures.
+- **Embedded Frontend**: The React Web UI is compiled and embedded into the binary using `go:embed`.
+- **TUI**: Built with the [Charm](https://charm.sh) stack (Bubbletea, Lipgloss).
+
+---
 
 ## Development
 
-Requires Go 1.22+ and Node.js 20+.
+Requirements: **Go 1.22+**, **Node.js 20+**
 
 ```bash
-make deps    # Install dependencies
-make lint    # Run linters
-make test    # Run tests
-make build   # Build binary
+make deps          # Install all dependencies
+make build-web     # Build React frontend
+make build         # Build single binary (includes frontend)
+make test          # Run tests with race detector
+make lint          # Run linters
+make run           # Run locally (dev mode)
 ```
 
-## Tech Stack
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
-- **Backend**: Go, Gin, SQLite, Cobra, Bubbletea
-- **Frontend**: React, Vite, Tailwind CSS
-- **Release**: GoReleaser
+---
+
+## Roadmap
+
+- [ ] Subtasks (one level)
+- [ ] `tusk add` and `tusk list` CLI subcommands
+- [ ] Watch mode (auto-import from a watched directory)
+- [ ] Homebrew tap
+- [ ] Smart lists (Today, Scheduled, Flagged)
+
+---
+
+## Contributing
+
+PRs and issues are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+---
 
 ## License
-MIT
+
+MIT — see [LICENSE](LICENSE).
